@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include prclz/__init__.py
+recursive-include prclz/data/ *.csv *.geojson
+include prclz/data_processing/country_codes.csv
+recursive-include prclz/prclz/ *.csv *.geojson
