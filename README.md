@@ -42,6 +42,20 @@ split_geojson.split_buildings(data_root = "/path/to/your/data/directory/", gadm_
 
 #### 7. Parcelization [NICO]
 
+## Get example files
+```python
+from prclz.data_processing import setup_paths
+from prclz.prclz import i_topology_utils
+
+region = 'Africa'
+gadm_code = 'DJI'
+gadm = 'DJI.1.1_1'
+
+# Function to return data paths for example data 
+data_paths = setup_paths.get_example_paths()
+bldgs_gdf, lines_gdf, blocks_gdf, complexity_gdf, parcels_gdf = i_topology_utils.load_all_inputs(data_paths, region, gadm_code, gadm) 
+
+```
 
 ## Reblocking
 
