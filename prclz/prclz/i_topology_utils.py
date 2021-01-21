@@ -1,6 +1,7 @@
 import typing 
 from typing import Union, Tuple 
 from itertools import combinations, chain, permutations
+from pathlib import Path
 
 import geopandas as gpd
 from shapely.geometry import MultiPolygon, Polygon, MultiLineString, Point, LineString
@@ -32,6 +33,7 @@ def csv_to_geo(csv_path, add_file_col=False) -> gpd.GeoDataFrame:
     Given a path to a block.csv file, returns as a GeoDataFrame
     '''
 
+    #df = pd.read_csv(csv_path, usecols=['block_id', 'geometry'])
     df = pd.read_csv(csv_path, usecols=['block_id', 'geometry'])
 
     # Block id should unique identify each block
@@ -46,7 +48,8 @@ def csv_to_geo(csv_path, add_file_col=False) -> gpd.GeoDataFrame:
 
     return gpd.GeoDataFrame(df, geometry='block_geom')
 
-def load_geopandas_files(region: str, gadm_code: str, 
+def load_geopandas_files(region: str, 
+                         gadm_code: str, 
                          gadm: str) -> (gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame):
 
     bldgs_path = os.path.join(BLDGS_PATH, region, gadm_code, "buildings_{}.geojson".format(gadm))
@@ -60,20 +63,61 @@ def load_geopandas_files(region: str, gadm_code: str,
 
     return bldgs, blocks, parcels, None
 
-def load_reblock_inputs(data_paths: Dict, region: str, gadm_code: str, gadm: str):
+def load_all_inputs(data_paths: Dict,
+                    region: str,
+                    gadm_code: str,
+                    gadm: str,
+                    ) -> Tuple[gpd.GeoDataFrame]:
+    
+    bldgs_path = Path(data_paths['bldgs']) / region / gadm_code / "buildings_{}.geojson".format(gadm)
+    lines_path = Path(data_paths['lines'] / region / gadm_code / "lines_{}.geojson".format(gadm))
+    blocks_path = Path(data_paths['blocks'] / region / gadm_code / "blocks_{}.csv".format(gadm))
+    complexity_path = Path(data_paths['complexity']) / region / gadm_code / "complexity_{}.csv".format(gadm)
+    parcels_path = Path(data_paths['parcels']) / region / gadm_code / "parcels_{}.geojson".format(gadm)
+
+    bldgs_gdf = gpd.read_file(bldgs_path)
+    lines_gdf = gpd.read_file(lines_path)
+    blocks_gdf = csv_to_geo(str(blocks_path))
+    complexity_gdf = load_complexity(str(complexity_path))
+    parcels_gdf = gpd.read_file(parcels_path)
+
+    return bldgs_gdf, lines_gdf, blocks_gdf, complexity_gdf, parcels_gdf
+
+
+def load_complexity(complexity_path: str) -> gpd.GeoDataFrame:
+    complexity = pd.read_csv(complexity_path)    
+    complexity = gpd.GeoDataFrame(complexity)
+    complexity['geometry'] = complexity['geometry'].apply(loads)
+    complexity.set_geometry('geometry', inplace=True)
+    
+    #complexity.rename(columns={'centroids_multipoint': 'buildings'}, inplace=True)
+    load_fn = lambda x: [point_to_node(p) for p in loads(x)]
+    complexity['centroids_multipoint'] = complexity['centroids_multipoint'].apply(load_fn)
+    #complexity['buildings'] = complexity['buildings'].apply(load_fn)
+    # complexity['building_count'] = complexity['buildings'].apply(lambda x: len(x))
+    return complexity
+
+def load_reblock_inputs(data_paths: Dict, 
+                        region: str, 
+                        gadm_code: str, 
+                        gadm: str
+                        ) -> Tuple[gpd.GeoDataFrame]:
 
     complexity_path = os.path.join(data_paths['complexity'], region, gadm_code, "complexity_{}.csv".format(gadm))
     parcels_path = os.path.join(data_paths['parcels'], region, gadm_code, "parcels_{}.geojson".format(gadm))
 
     # Load the complexity file
-    complexity = pd.read_csv(complexity_path)    
-    complexity = gpd.GeoDataFrame(complexity)
-    complexity['geometry'] = complexity['geometry'].apply(loads)
+    complexity = load_complexity(complexity_path)
     complexity.rename(columns={'centroids_multipoint': 'buildings'}, inplace=True)
-    complexity.set_geometry('geometry', inplace=True)
-    load_fn = lambda x: [point_to_node(p) for p in loads(x)]
-    complexity['buildings'] = complexity['buildings'].apply(load_fn)
     complexity['building_count'] = complexity['buildings'].apply(lambda x: len(x))
+    # complexity = pd.read_csv(complexity_path)    
+    # complexity = gpd.GeoDataFrame(complexity)
+    # complexity['geometry'] = complexity['geometry'].apply(loads)
+    # complexity.rename(columns={'centroids_multipoint': 'buildings'}, inplace=True)
+    # complexity.set_geometry('geometry', inplace=True)
+    # load_fn = lambda x: [point_to_node(p) for p in loads(x)]
+    # complexity['buildings'] = complexity['buildings'].apply(load_fn)
+    # complexity['building_count'] = complexity['buildings'].apply(lambda x: len(x))
 
     # Split it into two dataframes
     buildings_df = complexity[['block_id', 'buildings', 'building_count']]
