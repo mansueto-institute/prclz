@@ -4,7 +4,7 @@
 
 
 ### overview/
-`prclz` is a library analysis of the topology of urban infrastructure. this library was used to power analysis for the [MillionNeighborhoodsMap](millionneighborhoods.org)
+`prclz` is a library for the analysis of the topology of urban infrastructure. this library was used to power analysis for the [Million Neighborhoods Map](millionneighborhoods.org)
 
 - generating vectors for street blocks in a neighborhood using street network information from [OpenStreetMap](https://www.openstreetmap.org/)
 - creating parcels/cadastral maps for building footprints and other land use features within each block 
