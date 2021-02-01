@@ -1,5 +1,7 @@
-<h1 align="center">p&nbsp;&nbsp;r&nbsp;&nbsp;c&nbsp;&nbsp;l&nbsp;&nbsp;z</h1>
+<div align="center"> <img src="./docs/logo.svg" height="200"> </div>
 <h6 align="center"> "<i>parcelize</i>" </h6>
+<div align="center"> <img alt="Made With Python" src="https://img.shields.io/badge/made%20with-python-%233776AB.svg?style=for-the-badge&logo=python&logoColor=ffdf76"> <a href="https://twitter.com/miurbanchicago"><img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/miurbanchicago?logo=twitter&style=for-the-badge"></a>
+
 
 ### overview/
 `prclz` is a library analysis of the topology of urban infrastructure. this library was used to power analysis for the [MillionNeighborhoodsMap](millionneighborhoods.org)
