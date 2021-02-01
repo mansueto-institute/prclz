@@ -1,12 +1,12 @@
-from shapely.geometry import (LineString, LinearRing, 
-                              MultiPolygon, Polygon, MultiLineString, 
-                              Point, MultiPoint, LineString)
-from shapely.ops import unary_union, linemerge
-from typing import Callable, List 
-import pandas as pd 
-import numpy as np 
-from itertools import combinations, chain, permutations
-import tqdm 
+from itertools import chain, combinations, permutations
+from typing import Callable, List
+
+import numpy as np
+import pandas as pd
+import tqdm
+from shapely.geometry import (LinearRing, LineString, MultiLineString,
+                              MultiPoint, MultiPolygon, Point, Polygon)
+from shapely.ops import linemerge, unary_union
 
 import i_topology
 

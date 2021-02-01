@@ -1,20 +1,22 @@
-import os 
-import geopandas as gpd 
-import pandas as pd 
-import numpy as np
+import os
+from pathlib import Path
+from typing import Callable, Dict, List
+
+import geopandas as gpd
 import igraph
-from pathlib import Path 
-from typing import Callable, List, Dict 
-from shapely.ops import unary_union, polygonize
-from shapely.geometry import MultiPolygon, Polygon, MultiLineString, Point, LineString
+import numpy as np
+import pandas as pd
+from shapely.geometry import (LineString, MultiLineString, MultiPolygon, Point,
+                              Polygon)
+from shapely.ops import polygonize, unary_union
 
 import i_topology
+import simplify_reblock
+from i_reblock import (add_buildings, add_outside_node, clean_graph,
+                       drop_buildings_intersecting_block)
 from i_topology import PlanarGraph
 from i_topology_utils import csv_to_geo, update_edge_types
-from i_reblock import add_buildings, clean_graph
-from i_reblock import add_outside_node, drop_buildings_intersecting_block
 from path_cost import FlexCost
-import simplify_reblock
 
 # Should just import the setup_paths.py script (eventually)
 from ..data_processing.setup_paths import *

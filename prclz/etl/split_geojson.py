@@ -1,8 +1,6 @@
 from typing import List, Union
 
 import geopandas as gpd
-from shapely.geometry import MultiPolygon, Polygon, MultiLineString
-from shapely.ops import cascaded_union
 from shapely.wkt import loads
 import pandas as pd
 import time 

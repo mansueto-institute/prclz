@@ -1,25 +1,27 @@
-import typing 
-from typing import Union, Sequence
-import numpy as np 
-import igraph 
-from itertools import combinations, chain, permutations
-from functools import reduce 
-import pickle 
-import os 
-from shapely.geometry import LineString, LinearRing, MultiPolygon, Polygon, MultiLineString, Point, MultiPoint, LineString
+import argparse
+import os
+import pickle
+import sys
+import time
+import typing
+from functools import reduce
+from itertools import chain, combinations, permutations
+from typing import List, Sequence, Tuple, Union
+
+import geopandas as gpd
+import geopy.distance as gpy
+import igraph
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+#from fib_heap import Fibonacci_heap
+import tqdm
+from heapdict import heapdict
+from shapely.geometry import (LinearRing, LineString, MultiLineString,
+                              MultiPoint, MultiPolygon, Point, Polygon)
 from shapely.ops import cascaded_union, unary_union
 from shapely.wkt import loads
-import time 
-import matplotlib.pyplot as plt 
-import sys 
-import argparse
-import geopy.distance as gpy 
-import pandas as pd 
-import geopandas as gpd
-from typing import List, Tuple
-from heapdict import heapdict
-#from fib_heap import Fibonacci_heap
-import tqdm 
+
 #from path_cost import BasePathCost
 
 '''
@@ -30,7 +32,7 @@ TO-DO:
       where the road is a polygon rather than linestring...
 '''
 
-from ..data_processing.setup_paths import build_data_dir, TRANS_TABLE
+from ..data_processing.setup_paths import TRANS_TABLE, build_data_dir
 
 BUF_EPS = 1e-4
 BUF_RATE = 2
@@ -1094,79 +1096,3 @@ def find_edge_from_coords(g, coord0, coord1):
             return None 
         else:
             return edge[0]
-
-########################################################################
-# BELOW THIS, CODE IS BEING COMMENTED OUT TO LATER BE DELETED ##########
-########################################################################
-
-
-#def plot_edge_type(g, output_file):
-
-#     edge_color_map = {None: 'red', 'waterway': 'blue', 
-#                       'highway': 'black', 'natural': 'green', 'gadm_boundary': 'orange'}
-#     visual_style = {}       
-#     SMALL = 0       
-#     visual_style['vertex_size'] = [SMALL for _ in g.vs]
-
-#     if 'edge_type' not in g.es.attributes():
-#         g.es['edge_type'] = None 
-#     visual_style['edge_color'] = [edge_color_map[t] for t in g.es['edge_type'] ]
-#     visual_style['layout'] = [(x[0],-x[1]) for x in g.vs['name']]
-
-#     return igraph.plot(g, output_file, **visual_style)
-
-
-# def plot_reblock(g, output_file):
-#     vtx_color_map = {True: 'red', False: 'blue'}
-#     edg_color_map = {True: 'red', False: 'blue'}
-    
-#     visual_style = {}
-#     if 'vertex_color' not in visual_style.keys():
-#         visual_style['vertex_color'] = [vtx_color_map[t] for t in g.vs['terminal'] ]
-    
-#     BIG = 20
-#     SMALL = 20
-#     if 'bbox' not in visual_style.keys():
-#         visual_style['bbox'] = (900,900)
-#     if 'vertex_size' not in visual_style.keys():
-#         visual_style['vertex_size'] = [BIG if v['terminal'] else SMALL for v in g.vs]
-
-#     if 'edge_color' not in visual_style.keys():
-#         visual_style['edge_color'] = [edg_color_map[t] for t in g.es['steiner'] ]
-        
-#     if 'layout' not in visual_style.keys():
-#         visual_style['layout'] = [(x[0],-x[1]) for x in g.vs['name']]
-        
-#     # if 'vertex_label' not in visual_style.keys():
-#     #     visual_style['vertex_label'] = [str(x) for x in g.vs['name']]
-
-#     return igraph.plot(g, output_file, **visual_style)
-
-# def write_reblock_svg(g, output_file):
-#     vtx_color_map = {True: 'red', False: 'blue'}
-#     edg_color_map = {True: 'red', False: 'blue'}
-    
-#     visual_style = {}
-#     if 'colors' not in visual_style.keys():
-#         visual_style['colors'] = [vtx_color_map[t] for t in g.vs['terminal'] ]
-    
-#     BIG = 5
-#     SMALL = 1
-
-#     visual_style['width'] = 600
-#     visual_style['height'] = 600
-
-#     if 'vertex_size' not in visual_style.keys():
-#         visual_style['vertex_size'] = [BIG if v['terminal'] else SMALL for v in g.vs]
-
-#     if 'edge_colors' not in visual_style.keys():
-#         visual_style['edge_colors'] = [edg_color_map[t] for t in g.es['steiner'] ]
-        
-#     if 'layout' not in visual_style.keys():
-#         visual_style['layout'] = [(x[0],-x[1]) for x in g.vs['name']]
-        
-#     # if 'vertex_label' not in visual_style.keys():
-#     #     visual_style['vertex_label'] = [str(x) for x in g.vs['name']]
-
-#     g.write_svg(output_file, **visual_style)
-

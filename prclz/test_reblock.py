@@ -1,12 +1,16 @@
+import copy
+from pathlib import Path
+from typing import Callable, List
+
+import geopandas as gpd
+from shapely.geometry import (LineString, MultiLineString, MultiPoint,
+                              MultiPolygon, Point, Polygon)
+
 import i_topology
-import geopandas as gpd 
-from pathlib import Path 
 import reblock2
+import simplify_reblock
 from path_cost import FlexCost
-import copy 
-from shapely.geometry import LineString, MultiPolygon, Polygon, MultiLineString, Point, MultiPoint, LineString
-from typing import Callable, List 
-import simplify_reblock 
+
 
 def make_square(lower_left_pt, w=1):
     pts = []

@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
-import i_topology
+
 import igraph
-import numpy as np 
+import numpy as np
+
+import i_topology
+
 '''
 NOTE: 
 This file defines an API for flexibly calculating the weight/cost of 

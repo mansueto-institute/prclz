@@ -1,26 +1,25 @@
-import typing
-from typing import List, Tuple, Callable
-
-from pathlib import Path 
-import geopandas as gpd
-from shapely.geometry import MultiPolygon, Polygon, MultiLineString, Point, LineString
-from shapely.ops import cascaded_union, polygonize, unary_union
-from shapely.wkt import loads, dumps
-import pandas as pd
-import numpy as np 
-import time 
-import tqdm 
-
-import os 
-import matplotlib.pyplot as plt 
-import sys 
-
 import argparse
-import igraph
+import os
+import sys
+import time
+import typing
+from pathlib import Path
+from typing import Callable, List, Tuple
 
-from . import i_topology_utils, i_topology
-from .i_topology import *
+import geopandas as gpd
+import igraph
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import tqdm
+from shapely.geometry import (LineString, MultiLineString, MultiPolygon, Point,
+                              Polygon)
+from shapely.ops import cascaded_union, polygonize, unary_union
+from shapely.wkt import dumps, loads
+
 from ..data_processing.setup_paths import *
+from . import i_topology, i_topology_utils
+from .i_topology import *
 
 
 def block_to_gadm(block:str) -> str:

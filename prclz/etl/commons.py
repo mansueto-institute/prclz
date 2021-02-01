@@ -1,11 +1,9 @@
-from pathlib import Path 
-from typing import Dict 
-import pandas as pd 
+from pathlib import Path
+from typing import Dict
 
 PRCLZ_ROOT = Path(__file__).parent.parent.absolute()
-TRANS_TABLE = pd.read_csv(str(PRCLZ_ROOT / "data_processing" / "country_codes.csv"))
 
-def build_data_dir(root: str) -> Dict:
+def build_data_dir(root: str) -> Dict[str, Path]:
     '''
     Builds data directory structure
     '''
@@ -36,6 +34,3 @@ def build_data_dir(root: str) -> Dict:
         v.mkdir(parents=True, exist_ok=True)
 
     return data_paths
-
-def get_example_paths() -> Dict:
-    return build_data_dir(PRCLZ_ROOT/"data")

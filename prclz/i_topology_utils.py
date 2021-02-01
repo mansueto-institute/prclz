@@ -1,25 +1,23 @@
-import typing 
-from typing import Union, Tuple 
-from itertools import combinations, chain, permutations
+import argparse
+import os
+import sys
+import time
+import typing
+from itertools import chain, combinations, permutations
 from pathlib import Path
+from typing import Dict, Tuple, Union
 
 import geopandas as gpd
-from shapely.geometry import MultiPolygon, Polygon, MultiLineString, Point, LineString
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from shapely.geometry import (LineString, MultiLineString, MultiPolygon, Point,
+                              Polygon)
 from shapely.ops import cascaded_union
 from shapely.wkt import loads
-import pandas as pd
-import numpy as np 
-import time 
 
-import os 
-import matplotlib.pyplot as plt 
-import sys 
-from typing import Dict 
-
-import argparse
+from ..data_processing.setup_paths import TRANS_TABLE, build_data_dir
 from .i_topology import PlanarGraph
-
-from ..data_processing.setup_paths import build_data_dir, TRANS_TABLE
 
 
 def point_to_node(point: Point) -> Tuple[float]:

@@ -1,13 +1,10 @@
-import pandas as pd
-import time 
-import typing
-import requests
+import os
 
-import os 
-import sys 
+import pandas as pd
+import requests
 import wget
 
-from .setup_paths import build_data_dir, TRANS_TABLE
+from .setup_paths import TRANS_TABLE, build_data_dir
 
 
 def urlexists_stream(uri: str) -> bool:
