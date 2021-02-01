@@ -4,8 +4,6 @@ import pandas as pd
 import requests
 import wget
 
-from .setup_paths import TRANS_TABLE, build_data_dir
-
 
 def urlexists_stream(uri: str) -> bool:
     '''

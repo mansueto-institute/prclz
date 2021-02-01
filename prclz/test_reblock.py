@@ -1,14 +1,10 @@
-import copy
-from pathlib import Path
-from typing import Callable, List
+
 
 import geopandas as gpd
-from shapely.geometry import (LineString, MultiLineString, MultiPoint,
-                              MultiPolygon, Point, Polygon)
+from shapely.geometry import LineString
 
 import i_topology
 import reblock2
-import simplify_reblock
 from path_cost import FlexCost
 
 

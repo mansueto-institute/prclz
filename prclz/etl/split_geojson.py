@@ -1,17 +1,16 @@
+import argparse
+import os
+import sys
+import time
 from typing import List, Union
 
 import geopandas as gpd
-from shapely.wkt import loads
+import matplotlib.pyplot as plt
 import pandas as pd
-import time 
+from shapely.wkt import loads
 
-import os 
-import matplotlib.pyplot as plt 
-import sys 
+from .setup_paths import TRANS_TABLE, build_data_dir
 
-import argparse
-
-from .setup_paths import build_data_dir, TRANS_TABLE
 
 def geofabrik_to_gadm(geofabrik_name):
     country_info = TRANS_TABLE[TRANS_TABLE['geofabrik_name'] == geofabrik_name]

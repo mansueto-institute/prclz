@@ -1,24 +1,19 @@
 import argparse
 import os
-import sys
 import time
-import typing
 from pathlib import Path
-from typing import Callable, List, Tuple
+from typing import List, Tuple
 
 import geopandas as gpd
 import igraph
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tqdm
-from shapely.geometry import (LineString, MultiLineString, MultiPolygon, Point,
-                              Polygon)
-from shapely.ops import cascaded_union, polygonize, unary_union
-from shapely.wkt import dumps, loads
 
-from ..data_processing.setup_paths import *
-from . import i_topology, i_topology_utils
+from shapely.ops import polygonize
+from shapely.wkt import dumps
+
+from . import i_topology_utils
 from .i_topology import *
 
 
