@@ -1,31 +1,19 @@
 import argparse
-import logging
-from logging import info
-from pathlib import Path
+from logging import basicConfig, error, info
 from typing import Dict
 from zipfile import ZipFile
 
-import requests
+from urlpath import URL
 
-from .commons import build_data_dir
+from .commons import build_data_dir, download
 
-GADM_URL = "https://biogeo.ucdavis.edu/data/gadm3.6/shp"
+GADM_URL = URL("https://biogeo.ucdavis.edu/data/gadm3.6/shp")
 filename = lambda country_code: f"gadm36_{country_code}_shp.zip"
-
-def download_shp_zip(location: Path, country_code: str) -> None:
-    '''
-    Downloads zipped shapefile from GADM to location.
-    '''
-    fname = filename(country_code)
-    r = requests.get(f"{GADM_URL}/{fname}", stream = True)
-    with (location/fname).open('wb') as tgt:
-        for _ in r.iter_content(chunk_size = 512):
-            tgt.write(_)
 
 def load_country_codes(csv_path: str) -> Dict[str, str]:
     pass 
 
-def get_GADM_data(data_root: str, country_codes: Dict[str, str], replace: bool = False) -> None:
+def fetch_data(data_root: str, country_codes: Dict[str, str], replace: bool = False) -> None:
     '''
     Downloads and unzips GADM files
 
@@ -41,9 +29,13 @@ def get_GADM_data(data_root: str, country_codes: Dict[str, str], replace: bool =
 
         if replace or not outpath.is_dir():
             info("Downloading GADM file for %s", country_name)
-            download_shp_zip(data_paths["zipfiles"], country_code)
-            with ZipFile(data_paths["zipfiles"]/filename(country_code)) as z:
-                z.extractall(outpath)
+            filepath = filename(country_code)
+            try: 
+                download(GADM_URL/filepath, data_paths["zipfiles"]/filepath) 
+                with ZipFile(data_paths["zipfiles"]/filepath) as z:
+                    z.extractall(outpath)
+            except Exception as e:
+                error("Error downloading shapefile for %s: %s", country_name, e)
 
         else:
             info("GADM file for %s exists and replace set to False; skipping", country_name)
@@ -55,5 +47,5 @@ if __name__ == "__main__":
     parser.add_argument("--replace",       action='store_true', default=False)
 
     args = parser.parse_args()
-    logging.basicConfig(level = "INFO")
+    basicConfig(level = "INFO")
     get_GADM_data(vars(args))
