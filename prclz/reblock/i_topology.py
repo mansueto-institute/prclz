@@ -32,7 +32,7 @@ TO-DO:
       where the road is a polygon rather than linestring...
 '''
 
-from ..data_processing.setup_paths import TRANS_TABLE, build_data_dir
+from ..etl.commons import build_data_dir
 
 BUF_EPS = 1e-4
 BUF_RATE = 2

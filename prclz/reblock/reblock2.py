@@ -23,17 +23,6 @@ from ..data_processing.setup_paths import *
 
 # ROOT = Path("/home/cooper/Documents/chicago_urban/mnp/cooper_prclz")
 
-# # Below this, paths will be automatically set based on ROOT
-# DATA_PATH = ROOT / "data"
-# GEOFABRIK_PATH = DATA_PATH / "input"
-# GEOJSON_PATH = DATA_PATH / "geojson"   
-
-# BLOCK_PATH = DATA_PATH / "blocks"
-# BLDGS_PATH = DATA_PATH / "buildings"
-# PARCELS_PATH = DATA_PATH / "parcels"
-# LINES_PATH = DATA_PATH / "lines"
-# COMPLEXITY_PATH = DATA_PATH / "complexity"
-
 def add_buildings_poly(parcel_poly_df: gpd.GeoDataFrame, 
                     building_list: List[Point],
                     planar_graph: i_topology.PlanarGraph,

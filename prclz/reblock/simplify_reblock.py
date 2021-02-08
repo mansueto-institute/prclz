@@ -153,10 +153,3 @@ def simplify_reblocked_graph(planar_graph: i_topology.PlanarGraph):
 #####################################################################
 #####################################################################
 
-
-# c0 = [(a,np.random.randn(1).item()) for a in range(5)]
-# c1 = [(5,b) for b in range(6)]
-# init_ls = LineString(c0+c1)
-# admiss_region = init_ls.buffer(1)
-
-# simpl = simplify_linestring(init_ls, admiss_region)
