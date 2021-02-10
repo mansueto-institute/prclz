@@ -34,7 +34,7 @@ def add_buildings(graph: PlanarGraph,
         graph.add_node_to_closest_edge(bldg_node, terminal=True)
 
     if total_blgds > 0:
-        graph.cleanup_linestring_attr()
+        graph._cleanup_linestring_attr()
     return graph 
 
 def clean_graph(graph: PlanarGraph) -> PlanarGraph:
@@ -299,7 +299,7 @@ def reblock_block_id(parcels: gpd.GeoDataFrame,
         return None  
 
     # (1) Convert parcel geometry to planar graph
-    planar_graph = PlanarGraph.multilinestring_to_planar_graph(parcel_geom)
+    planar_graph = PlanarGraph.from_multilinestring(parcel_geom)
 
     # (2) Update the edge types based on the block graph
     missing, blk_coor = update_edge_types(planar_graph, 
