@@ -8,6 +8,7 @@ from functools import reduce
 from itertools import chain, combinations, permutations
 from typing import List, Sequence, Tuple, Union, Type
 from logging import debug, info, warning, error
+from pathlib import Path 
 
 import geopandas as gpd
 import geopy.distance as gpy
@@ -861,37 +862,55 @@ class PlanarGraph(igraph.Graph):
 
         return metric_closure
 
-    # def plot_reblock(self, output_file, visual_style=None):
-
-    #     if visual_style is None:
-    #         visual_style = {}
-        
+    # def get_plot_style(self):
     #     vtx_color_map = {True: 'red', False: 'blue'}
     #     edg_color_map = {True: 'red', False: 'blue'}
-        
+
+    #     visual_style = {}
+
     #     if 'terminal' in self.vs.attributes():
-    #         if 'vertex_color' not in visual_style.keys():
-    #             visual_style['vertex_color'] = [vtx_color_map[t] for t in self.vs['terminal'] ]
+    #         visual_style['vertex_color'] = [vtx_color_map[t] for t in self.vs['terminal'] ]
         
     #     if 'steiner' in self.es.attributes():
-    #         if 'edge_color' not in visual_style.keys():
-    #             visual_style['edge_color'] = [edg_color_map[t] for t in self.es['steiner'] ]
-    #             #print(visual_style)
+    #         visual_style['edge_color'] = [edg_color_map[t] for t in self.es['steiner'] ]
+    #         #print(visual_style)
 
-    #     if 'layout' not in visual_style.keys():
-    #         visual_style['layout'] = [(x[0],-x[1]) for x in self.vs['name']]
-    #     else:
-    #         print("Layout is already in visual_style")
+    #     visual_style['layout'] = [(x[0],-x[1]) for x in self.vs['name']]
+        
+    #     return visual_style
+
+    def plot_reblock(self, output_file, visual_style=None):
+
+        output_file = Path(output_file)
+        output_file.parent.mkdir(exist_ok=True, parents=True)
+
+        if visual_style is None:
+            visual_style = {}
+        
+        vtx_color_map = {True: 'red', False: 'blue'}
+        edg_color_map = {True: 'red', False: 'blue'}
+        
+        if 'terminal' in self.vs.attributes():
+            if 'vertex_color' not in visual_style.keys():
+                visual_style['vertex_color'] = [vtx_color_map[t] for t in self.vs['terminal'] ]
+        
+        if 'steiner' in self.es.attributes():
+            if 'edge_color' not in visual_style.keys():
+                visual_style['edge_color'] = [edg_color_map[t] for t in self.es['steiner'] ]
+                #print(visual_style)
+
+        if 'layout' not in visual_style.keys():
+            visual_style['layout'] = [(x[0],-x[1]) for x in self.vs['name']]
+        else:
+            print("Layout is already in visual_style")
             
-    #     if 'vertex_label' not in visual_style.keys():
-    #         visual_style['vertex_label'] = [str(x) for x in self.vs['name']]
-    #     else:
-    #         print("vertex_label is already in visual_style")
+        if 'vertex_label' not in visual_style.keys():
+            visual_style['vertex_label'] = [str(x) for x in self.vs['name']]
+        else:
+            print("vertex_label is already in visual_style")
 
-    #     #return visual_style
-
-    #     #print("visual_style = {}".format(visual_style))
-    #     igraph.plot(self, output_file, **visual_style)
+        print(output_file)
+        igraph.plot(self, str(output_file), **visual_style)
 
     def get_steiner_linestrings(self, 
         expand: bool=True,
@@ -988,6 +1007,11 @@ class PlanarGraph(igraph.Graph):
         
             return new_lines, existing_lines, new_polys, existing_polys
         else:
+            if isinstance(new_lines, LineString):
+                new_lines = MultiLineString([new_lines])
+            if isinstance(existing_lines, LineString):
+                existing_lines = MultiLineString([existing_lines])
+                
             return new_lines, existing_lines
 
     def get_terminal_points(self) -> MultiPoint:

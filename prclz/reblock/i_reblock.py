@@ -303,8 +303,8 @@ def reblock_block_id(parcels: gpd.GeoDataFrame,
 
     # (2) Update the edge types based on the block graph
     missing, blk_coor = update_edge_types(planar_graph, 
-                                                           block_geom, 
-                                                           check=True)
+                                           block_geom, 
+                                           check=True)
 
     # (3) Do reblocking 
     new, existing, term_pts = get_optimal_path(planar_graph, 
