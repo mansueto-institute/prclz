@@ -10,8 +10,7 @@ from prclz.reblock import i_topology
 # from path_cost import FlexCost
 '''
 To-Do:
- - Fix the through lines test. It doesn't actually have a 
-   possible path in the part we're expecting thru lines
+ - Do another round of refactoring
  - Get the simplify linestring part working, and tested
  - Build out the momepy parcelization pipeline, and connect
    that to our reblocking 
@@ -288,7 +287,7 @@ class TestWidthSteinerApprox(unittest.TestCase):
 class TestAddingThruStreets(unittest.TestCase):
     """
     Because Steiner Alg leaves trees, we have the option to
-    connect trees. Test the add_through_lines method
+    connect trees. Test the add_through_lines method.
     """
     SAVE = False
     def _make_data(self):

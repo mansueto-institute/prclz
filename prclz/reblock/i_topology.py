@@ -18,18 +18,8 @@ import pandas as pd
 import tqdm
 from shapely.geometry import (LinearRing, LineString, MultiLineString,
                               MultiPoint, MultiPolygon, Point, Polygon)
-from shapely.ops import cascaded_union, unary_union
+from shapely.ops import cascaded_union, unary_union, linemerge
 from shapely.wkt import loads
-
-#from path_cost import BasePathCost
-
-'''
-TO-DO:
-- Try different loss functions on DJI
-- Build a visualizer
-    - maybe one to include the width of the road,
-      where the road is a polygon rather than linestring...
-'''
 
 from ..etl.commons import build_data_dir
 
@@ -92,6 +82,42 @@ def calc_metric_closure(G: PlanarGraph,
         H.add_edge(u['name'], v['name'], **kwargs)
     return H
 
+def simplify_linestring(init_ls: LineString,
+                        admiss_region: Polygon,
+                        ) -> LineString:
+    '''
+    Finds the simplest linestring maintaining the endpoints
+    of the initial linestring, but only within the 
+    admissable region
+    '''
+
+    EPS = 1e-6
+
+    ambient_space = admiss_region.envelope.buffer(0.00001)
+    invalid_region = ambient_space.difference(admiss_region.buffer(EPS))
+    init_pts = pd.Series([Point(c) for c in init_ls.coords])
+
+    if init_ls.intersects(invalid_region):
+        print("Invalid region should not intersect orig line")
+        return init_ls
+
+    cur_pt_idxs = [0, len(init_pts)-1]
+    cur_linestring = LineString(list(init_pts[cur_pt_idxs]))
+
+    while cur_linestring.intersects(invalid_region):
+
+        # Get the pt that is the farthest from the cur_linestring
+        distances = [cur_linestring.distance(p) for p in init_pts]
+        farthest_idx = np.argmax(distances)
+
+        # Add it to our pt idx list and our linestring
+        # NOTE: we maintain the idx list so the linestring
+        #       is in the right order
+        cur_pt_idxs.append(farthest_idx)
+        cur_pt_idxs.sort()
+        cur_linestring = LineString(list(init_pts[cur_pt_idxs]))
+
+    return cur_linestring
 
 def distance_meters(a0, a1):
     """Helper for getting spatial dist from lon/lat"""
@@ -951,25 +977,25 @@ class PlanarGraph(igraph.Graph):
             if num_neighbors == 2 and not v['terminal']:
                 self._simplify_node(v)
 
-    # def to_pieces(self) -> List[List[int]]:
-    #     '''
-    #     Creates representation of graph 
-    #     '''
+    def to_pieces(self) -> List[List[int]]:
+        '''
+        Creates representation of graph 
+        '''
 
-    #     piece_list = []
-    #     all_visited_idxs = set()
+        piece_list = []
+        all_visited_idxs = set()
 
-    #     print("Breaking to pieces...")
-    #     for v in tqdm.tqdm(self.vs):
-    #         if v.index not in all_visited_idxs:
-    #             neighbors = v.neighbors()
-    #             num_neighbors = len(neighbors)
-    #             if num_neighbors == 2:
-    #                 cont_vs = self.search_continuous_edge(v)
-    #                 for v in cont_vs:
-    #                     all_visited_idxs.add(v)
-    #                 piece_list.append(cont_vs)
-    #     return piece_list 
+        print("Breaking to pieces...")
+        for v in tqdm.tqdm(self.vs):
+            if v.index not in all_visited_idxs:
+                neighbors = v.neighbors()
+                num_neighbors = len(neighbors)
+                if num_neighbors == 2:
+                    cont_vs = self.search_continuous_edge(v)
+                    for v in cont_vs:
+                        all_visited_idxs.add(v)
+                    piece_list.append(cont_vs)
+        return piece_list 
 
     ################################################### 
     ## ADDITIONAL ATTRIBUTES FOR ADVANCED REBLOCKING ##
@@ -1107,7 +1133,35 @@ class PlanarGraph(igraph.Graph):
             del self.es['width']
         if not has_edge_type and "edge_type" in self.es.attributes():
             del self.es['edge_type']
-       
+
+    def simplify_reblocked_graph(self):
+
+        # Extract the optimal subgraph of new lines only
+        def filter(edge) -> bool:
+            if 'is_through_line' in edge.attributes():
+                return ((edge['steiner'] or edge['is_through_line']) and (edge['edge_type'] != 'highway'))
+            else:
+                return (edge['steiner'] and (edge['edge_type'] != 'highway'))
+
+        opt_subgraph = self.subgraph_edges(self.es.select(filter))
+        idx_v_pieces = opt_subgraph.to_pieces()
+        simplified_linestrings = []
+
+        print("Simplifing linestrings...")
+        for v_indices in tqdm.tqdm(idx_v_pieces, total=len(idx_v_pieces)):
+            # Convert vertices -> edges -> linestrings
+            v_seq = opt_subgraph.vs[v_indices]
+            edges = opt_subgraph.es.select(_within=v_seq)
+
+            # And fetch the buffer area based on the width across 
+            # that linestring/edge-sequence  
+
+            edge_linestring, _, admiss_region, _ = opt_subgraph.get_steiner_linestrings(expand=False, return_polys=True, edge_seq=edges)
+            edge_linestring = linemerge(edge_linestring)
+
+            simplified_linestring = simplify_linestring(edge_linestring, admiss_region)
+            simplified_linestrings.append(simplified_linestring)
+        return simplified_linestrings      
 
 
 # def convert_to_lines(planar_graph) -> MultiLineString:
