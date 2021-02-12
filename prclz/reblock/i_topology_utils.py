@@ -20,6 +20,56 @@ from shapely.wkt import loads
 from ..etl.commons import build_data_dir
 from .i_topology import PlanarGraph
 
+def to_gdf(shape):
+    if isinstance(shape, list):
+        return gpd.GeoDataFrame.from_dict({'geometry':shape})
+    else:
+        return gpd.GeoDataFrame.from_dict({'geometry':[shape]})
+
+def viz_reblock(parcel_geom: MultiLineString,
+                bldg_geoms: MultiPolygon,
+                block_geom: Polygon,
+                new_steiner: MultiLineString,
+                exist_steiner: MultiLineString,
+                ):
+    parcel_geom = to_gdf(parcel_geom)
+    bldg_geoms = to_gdf(bldg_geoms)
+    block_geom = to_gdf(block_geom)
+    new_steiner = to_gdf(new_steiner)
+    exist_steiner = to_gdf(exist_steiner)
+    
+    ax = block_geom.plot(edgecolor='black', alpha=0.1)
+    ax = parcel_geom.plot(edgecolor='black', alpha=0.5, ax=ax)
+    ax = bldg_geoms.plot(color='black', ax=ax)
+    ax = new_steiner.plot(color='red', ax=ax)
+    ax = exist_steiner.plot(color='green', ax=ax)
+    return ax
+
+def debug_load():
+    base = Path('/home/cooper/Documents/chicago_urban/mnp/prclz-proto/data')
+    blocks_p = base / "blocks" / "Africa" / "DJI" / "blocks_DJI.1.1_1.csv"
+    bldgs_p = base / "buildings" / "Africa" / "DJI" / "buildings_DJI.1.1_1.geojson"
+    parcels_p = base / "parcels" / "Africa" / "DJI" / "parcels_DJI.1.1_1.geojson"
+
+    blocks = pd.read_csv(blocks_p)    
+    blocks = gpd.GeoDataFrame(blocks)
+    blocks['geometry'] = blocks['geometry'].apply(loads)
+
+    bldgs = gpd.read_file(bldgs_p)
+    parcels = gpd.read_file(parcels_p)
+
+    return parcels, bldgs, blocks
+
+# Use 'DJI.1.1_1_1'
+def extract(block_id: str,
+            parcels: gpd.GeoDataFrame,
+            bldgs: gpd.GeoDataFrame,
+            blocks: gpd.GeoDataFrame,
+            ) -> Tuple[MultiLineString, MultiPolygon, Polygon]:
+    block = blocks[blocks['block_id']==block_id].iloc[0]['geometry']
+    parcel = parcels[parcels['block_id']==block_id].iloc[0]['geometry']
+    bldg_sel = list(bldgs[bldgs.intersects(block)]['geometry'].values)
+    return parcel, bldg_sel, block
 
 def point_to_node(point: Point) -> Tuple[float, float]:
     '''
