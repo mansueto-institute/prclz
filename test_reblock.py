@@ -2,6 +2,7 @@ import geopandas as gpd
 from shapely.geometry import LineString, Polygon
 from shapely.wkt import loads
 import unittest
+from logging import basicConfig, debug, info
 
 from prclz.reblock import i_topology
 from prclz.reblock.i_topology_utils import update_edge_types
@@ -166,7 +167,11 @@ class TestExistingSteinerApprox(unittest.TestCase):
     uses the block polygon (the outside of the grid) to reweight
     the PlanarGraph edges before the Steiner Approx.
     Without the block reweighting, take the hypot but WITH
-    reweighting, lowest cost path is around the perimeter
+    reweighting, lowest cost path is around the perimeter.
+
+    The test graph is a simple square with one diagonal. The diag
+    is the opt path, but upon weighting the perim=0, bc they already
+    exist, the opt path becomes traversing the perimiter.
     """
     SAVE = False
     def _make_data(self):
@@ -220,8 +225,60 @@ class TestExistingSteinerApprox(unittest.TestCase):
             p = "./reblock_tests/test_w_block.png"
             graph.plot_reblock(p)
 
+class TestWidthSteinerApprox(unittest.TestCase):
+    """
+    Defualt Steiner uses eucl_dist as the 'weight' param,
+    but advanced options allow for specifying weight=eucl_dist/width.
+    In this test, by restricting the width of the hypotenous path
+    along the diagonal of a square, the optimal path changes from the
+    diagonal to along the perimter of the square
+
+    NOTE: same basic test graph as TestExistingSteinerApprox
+    """
+    SAVE = False
+    def _make_data(self):
+        multi = []
+        multi.append(LineString([(0,0),(1,0),(1,1),(0.5,0.5),(0,0)]))
+        multi.append(LineString([(0,0),(0.5,0.5),(1,1),(0,1),(0,0)]))
+        graph = i_topology.PlanarGraph.from_multilinestring(multi)
+        graph.add_node_to_closest_edge((0,0), terminal=True)
+        graph.add_node_to_closest_edge((1,1), terminal=True)
+        
+        # A 'houses' that straddles the opt path very closely
+        eps = 0.00001
+        p0 = Polygon([(0.5, 0.5+eps),(0.55,0.55+eps),
+                      (0.55,0.55+2*eps), (0.5,0.5+2*eps),
+                      ]) 
+
+        return graph, [p0]
+
+    def test_w_width(self):
+        graph, bldg_polys = self._make_data()
+        # NOTE: shapely geom compares set theoretic values
+        #       so [0,0.5,1] == [0,1]
+        answer_new0 = "MULTILINESTRING ((0 0, 0 1), (0 1, 1 1))"
+        answer_new1 = "MULTILINESTRING ((0 0, 1 0), (1 0, 1 1))"
+        answer_exist = "GEOMETRYCOLLECTION EMPTY"   
+        
+        # Update width
+        graph.set_edge_width(bldg_polys, simplify=True)
+
+        # Update weight
+        graph.calc_edge_weight()
+        
+        graph.steiner_tree_approx()
+        graph_steiner = graph.get_steiner_linestrings(expand=False)
+        new_steiner = graph_steiner[0]
+        exist_steiner = graph_steiner[1]
+
+        new_cond = (new_steiner.equals(loads(answer_new0))
+                      or new_steiner.equals(loads(answer_new1)))
+        self.assertTrue(new_cond)
+        self.assertTrue(exist_steiner.equals(loads(answer_exist)))
+
 
 if __name__ == "__main__":
+    #basicConfig(level='DEBUG')
     unittest.main()
 
 

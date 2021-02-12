@@ -6,7 +6,7 @@ import time
 import typing
 from functools import reduce
 from itertools import chain, combinations, permutations
-from typing import List, Sequence, Tuple, Union, Type
+from typing import List, Sequence, Tuple, Union, Type, Set, Callable
 from logging import debug, info, warning, error
 from pathlib import Path 
 
@@ -835,32 +835,32 @@ class PlanarGraph(igraph.Graph):
         for i in steiner_edge_idxs:
             self.es[i]['steiner'] = True 
 
-    def flex_steiner_tree_approx(self, 
-                                 cost_fn, 
-                                 return_metric_closure: bool = True):
-        '''
-        MAYBE THIS WILL BE DEPRECATED???
-        All Nodes within the graph have an attribute, Node.terminal, which is a boolean
-        denoting whether they should be included in the set of terminal_nodes which
-        are connected by the Steiner Tree approximation
-        '''
-        terminal_nodes = self.vs.select(terminal_eq=True)
+    # def flex_steiner_tree_approx(self, 
+    #                              cost_fn, 
+    #                              return_metric_closure: bool = True):
+    #     '''
+    #     MAYBE THIS WILL BE DEPRECATED???
+    #     All Nodes within the graph have an attribute, Node.terminal, which is a boolean
+    #     denoting whether they should be included in the set of terminal_nodes which
+    #     are connected by the Steiner Tree approximation
+    #     '''
+    #     terminal_nodes = self.vs.select(terminal_eq=True)
 
-        rv = flex_steiner_tree(self, 
-                               terminal_nodes, 
-                               cost_fn = cost_fn,
-                               return_metric_closure = return_metric_closure)
+    #     rv = flex_steiner_tree(self, 
+    #                            terminal_nodes, 
+    #                            cost_fn = cost_fn,
+    #                            return_metric_closure = return_metric_closure)
 
-        if return_metric_closure:
-            steiner_edge_idxs, metric_closure = rv
-        else:
-            steiner_edge_idxs = rv  
-            metric_closure = None  
+    #     if return_metric_closure:
+    #         steiner_edge_idxs, metric_closure = rv
+    #     else:
+    #         steiner_edge_idxs = rv  
+    #         metric_closure = None  
 
-        for i in steiner_edge_idxs:
-            self.es[i]['steiner'] = True 
+    #     for i in steiner_edge_idxs:
+    #         self.es[i]['steiner'] = True 
 
-        return metric_closure
+    #     return metric_closure
 
     # def get_plot_style(self):
     #     vtx_color_map = {True: 'red', False: 'blue'}
@@ -1011,7 +1011,7 @@ class PlanarGraph(igraph.Graph):
                 new_lines = MultiLineString([new_lines])
             if isinstance(existing_lines, LineString):
                 existing_lines = MultiLineString([existing_lines])
-                
+
             return new_lines, existing_lines
 
     def get_terminal_points(self) -> MultiPoint:
@@ -1117,61 +1117,133 @@ class PlanarGraph(igraph.Graph):
 
     ################################################### 
     ## ADDITIONAL ATTRIBUTES FOR ADVANCED REBLOCKING ##
-    def search_continuous_edge(self, v, visited_indices=None):
-        '''
+    def _search_continuous_edge(self, 
+                                v: igraph.Vertex, 
+                                visited_indices: Set[int]=None,
+                                ) -> Set[int]:
+        """
         Given a vertex, v, will find the continuous string of
-        vertices v is part of.
-        '''
+        vertices v is part of. 
+        NOTE: Recursive function
+
+        Args:
+            v: current Vertex. If v has 2 neighbors, it's part
+               of a continuous string. If not, recursion ends
+            visited_indices:
+        """
         if visited_indices is None:
-            visited_indices = []
+            #visited_indices = []
+            visited_indices = set()
         
         neighbors = v.neighbors()
-        visited_indices.append(v.index)
+        #visited_indices.append(v.index)
+        visited_indices.add(v.index)
 
         if len(neighbors) != 2:
             return visited_indices
         else:
             for n in neighbors:
                 if n.index not in visited_indices:
-                    path = self.search_continuous_edge(n, visited_indices)
+                    path = self._search_continuous_edge(n, visited_indices)
             return visited_indices 
 
-    def simplify_edge_width(self):
-        '''
+    def _simplify_edge_width(self) -> None:
+        """
         Resets edge width to be the min over
-        a continuous segment
-        '''
+        a continuous segment. Sets width to be the min over continous
+        paths. So given subgraph w/ Nodes A-B-C-D, the width
+        is the min(AB,BC,CD). Wrt road segments, this is more
+        reflective of real life where road width is constant
+        between intersections
+        """
         all_visited = set()
 
-        print("Simplifying edge width...")
+        debug("Simplifying edge width...")
         for v in tqdm.tqdm(self.vs):
             neighbors = v.neighbors()
             num_neighbors = len(neighbors)
             if num_neighbors == 2:
-                # get the two edges
-                cont_vs = self.search_continuous_edge(v)
+                # get the edge sequence
+                cont_vs = self._search_continuous_edge(v)
+                
+                debug("\nVertex: {}".format(v['name']))
+                debug([self.vs[i]['name'] for i in cont_vs])
+                
                 edges = self.es.select(_within=cont_vs)
+                debug("Found {} edges".format(len(edges)))
+
                 min_width = min([e['width'] for e in edges])
                 if min_width is None:
-                    print("Vertex {} has {} neighbors".format(v.index, num_neighbors))
-                    print("\tsegment is {}".format(cont_vs))
+                    debug("Vertex {} has {} neighbors".format(v.index, num_neighbors))
+                    debug("\tsegment is {}".format(cont_vs))
                 for e in edges:
                     e['width'] = min_width
 
     def set_edge_width(self, 
                        other_geoms: List[Polygon],
-                       simplify=True) -> None:
-        '''
-        Adds following properties:
-            To edges:
-                - edge_width: min dist to other_geoms
-        '''
+                       simplify: bool=True,
+                       ) -> None:
+        """
+        For each Edge, sets a 'width' attribute, which is the minimum
+        distance from that Edge to a set of Polygons, provided in 
+        other_geoms. Functionally, this captures the possible width of
+        the road segment built along the edge. 
+
+        Args:
+            other_geoms: Edge width is calculated relative these geometries
+            simplify: if True, the width is set to be the min over continous
+                      paths. So given subgraph w/ Nodes A-B-C-D, the width
+                      is the min(AB,BC,CD). Wrt road segments, this is more
+                      reflective of real life where road width is constant
+                      between intersections
+
+        Returns:
+            Modifies graph in-place, no return value
+        """
         for e in self.es:
             e_line = LineString(self.edge_to_coords(e))
             distances = [e_line.distance(g) for g in other_geoms]
             e['width'] = min(distances) 
         if simplify:
-            self.simplify_edge_width()  
+            self._simplify_edge_width() 
+
+    def calc_edge_weight(self,
+                         cost_fn: Callable[[igraph.Edge], float]=None,
+                         ) -> None:
+        """
+        Recalculates the Edge 'weight' attribute based on the other
+        Edge attrs. By default, the cost function will be:
+            
+            default_fn(E): E['eucl_dist']/E['width']) * (not E['edge_type']=='highway')
+
+        However, user can specify a cost_fn which will be called on each
+        edge, parsing the edge attrs accordingly. 
+
+        Args:
+            cost_fn: A user-defined function taking in an edge as input, 
+                     and returns weight based on the edge attrs
+
+        Returns:
+            Modifies graph in-place, no return value
+        """
+        has_edge_type = "edge_type" in self.es.attributes()
+        has_width = "width" in self.es.attributes()
+        
+        if cost_fn is None:
+            # Stand-in vals for use in default cost_fn
+            if not has_width:
+                self.es['width'] = 1
+            if not has_edge_type:
+                self.es['edge_type'] = [None]*len(self.es)
+            cost_fn = lambda e: (e['eucl_dist']/e['width']) * (not e['edge_type']=='highway')
+
+        self.es['weight'] = [cost_fn(e) for e in self.es]
+
+        # Clean up the stand-in vals, if applicable
+        if not has_width and "width" in self.es.attributes():
+            del self.es['width']
+        if not has_edge_type and "edge_type" in self.es.attributes():
+            del self.es['edge_type']
 
     # def set_node_angles(self, save_degree=True, format='degrees'):
     #     '''
