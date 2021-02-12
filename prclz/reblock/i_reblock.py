@@ -14,7 +14,7 @@ from shapely.geometry import (LinearRing, LineString, MultiLineString,
                               MultiPoint, MultiPolygon, Point, Polygon)
 from logging import basicConfig, debug, info, warning, error
 
-from .i_topology_utils import update_edge_types
+#from .i_topology_utils import update_edge_types
 from .i_topology import PlanarGraph
 
 
@@ -115,72 +115,6 @@ def get_optimal_path(graph: PlanarGraph,
     terminal_points = graph.get_terminal_points()
 
     return new_steiner, existing_steiner, terminal_points
-
-## TO DEPRECATE
-# class CheckPointer:
-#     '''
-#     Small container class which handles saving of work, checking if
-#     prior work exists, etc
-#     '''
-
-#     def __init__(self, region: str, gadm: str, gadm_code: str, drop_already_completed: bool):
-
-#         reblock_stub =  "reblock"
-
-#         self.reblock_path = os.path.join(DATA_PATH, reblock_stub, region, gadm_code)
-#         if not os.path.exists(self.reblock_path):
-#             os.makedirs(self.reblock_path)
-#         self.summary_path = os.path.join(self.reblock_path, "reblock_summary_{}.csv".format(gadm))
-#         self.steiner_path = os.path.join(self.reblock_path, "steiner_lines_{}.csv".format(gadm))
-#         self.terminal_path = os.path.join(self.reblock_path, "terminal_points_{}.csv".format(gadm))
-
-#         self.prior_work_exists = (os.path.exists(self.summary_path)) and drop_already_completed
-
-#         self.summary_dict, self.steiner_lines_dict, self.terminal_points_dict = self.load_dicts()
-#         self.completed = set(self.summary_dict.keys())
-#         if self.prior_work_exists:
-#             print("--Loading {} previously computed results".format(len(self.completed)))
-
-#     def update(self, block_id, new_steiner, existing_steiner, terminal_points, summary):
-#         new_steiner = new_steiner if new_steiner is None else dumps(new_steiner)
-#         existing_steiner = existing_steiner if existing_steiner is None else dumps(existing_steiner)
-#         terminal_points = terminal_points if terminal_points is None else dumps(terminal_points)    
-        
-#         self.summary_dict[block_id] = summary 
-#         self.terminal_points_dict[block_id] = [terminal_points, block_id]
-#         self.steiner_lines_dict[block_id+'new_steiner'] = [new_steiner, block_id, 'new_steiner', block_id+'new_steiner'] 
-#         self.steiner_lines_dict[block_id+'existing_steiner'] = [existing_steiner, block_id, 'existing_steiner', block_id+'existing_steiner'] 
-
-#     def load_dicts(self):
-#         if self.prior_work_exists:
-#             summary_records = pd.read_csv(self.summary_path).drop(['Unnamed: 0'], axis=1).to_dict('records')
-#             summary_dict = {d['block']:list(d.values()) for d in summary_records}
-
-#             steiner_records = pd.read_csv(self.steiner_path).drop(['Unnamed: 0'], axis=1).to_dict('records')
-#             steiner_dict = {d['block_w_type']:list(d.values()) for d in steiner_records}
-
-#             terminal_points_records = pd.read_csv(self.terminal_path).drop(['Unnamed: 0'], axis=1).to_dict('records')
-#             terminal_points_dict = {d['block']:list(d.values()) for d in terminal_points_records}
-#             return summary_dict, steiner_dict, terminal_points_dict
-#         else:
-#             return {}, {}, {}
-
-#     def save(self):
-#         summary_columns = [      'bldg_time',       'simplify_time',     'steiner_time', 'num_graph_comps',  
-#                             'node_count_pre',     'node_count_post',   'edge_count_pre', 'edge_count_post',
-#                                 'bldg_count',    'num_block_coords', 'num_block_coords_unmatched',  'block']
-
-#         steiner_columns = ['geometry', 'block', 'line_type', 'block_w_type']
-#         terminal_columns = ['geometry', 'block']
-
-#         summary_df = pd.DataFrame.from_dict(self.summary_dict, orient='index', columns=summary_columns)
-#         steiner_df = pd.DataFrame.from_dict(self.steiner_lines_dict, orient='index', columns=steiner_columns)
-#         terminal_df = pd.DataFrame.from_dict(self.terminal_points_dict, orient='index', columns=terminal_columns)
-
-#         summary_df.to_csv(self.summary_path)
-#         steiner_df.to_csv(self.steiner_path)
-#         terminal_df.to_csv(self.terminal_path)
-
 
 def drop_buildings_intersecting_block(parcel_geom: LineString,
                                       bldg_centroids: List[Point],
@@ -302,7 +236,7 @@ def reblock_block_id(parcels: gpd.GeoDataFrame,
     planar_graph = PlanarGraph.from_multilinestring(parcel_geom)
 
     # (2) Update the edge types based on the block graph
-    missing, blk_coor = update_edge_types(planar_graph, 
+    missing, blk_coor = planar_graph.update_edge_types( 
                                            block_geom, 
                                            check=True)
 

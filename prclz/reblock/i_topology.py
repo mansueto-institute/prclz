@@ -1,6 +1,5 @@
 import argparse
 import os
-import pickle
 import sys
 import time
 import typing
@@ -16,9 +15,7 @@ import igraph
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-#from fib_heap import Fibonacci_heap
 import tqdm
-from heapdict import heapdict
 from shapely.geometry import (LinearRing, LineString, MultiLineString,
                               MultiPoint, MultiPolygon, Point, Polygon)
 from shapely.ops import cascaded_union, unary_union
@@ -40,6 +37,14 @@ BUF_EPS = 1e-4
 BUF_RATE = 2
 PlanarGraph = None
 
+def edge_seq_to_linestring(e_seq, graph):
+
+    lines = []
+    for e in e_seq:
+        e_line = LineString(graph.edge_to_coords(e))
+        lines.append(e_line)
+    return unary_union(lines)
+
 def map_pts(pt_list, pt0, pt1):
     '''
     Helper function, assigns each pt in pt_list to whichever
@@ -54,179 +59,6 @@ def map_pts(pt_list, pt0, pt1):
             pt1_assign.append(pt)
     assert len(pt0_assign) == len(pt1_assign), "Lens are not the same -- should be equal"
     return pt0_assign, pt1_assign
-
-# def shortest_path(g, 
-#                   origin_pt: Tuple[float, float], 
-#                   target_pt: Tuple[float, float], 
-#                   cost_fn,
-#                   return_epath = True,
-#                   return_dist = True):
-
-#     #print("TEST fdafdafdsa INSIDE")
-    
-#     # Build priority queue
-#     Q = heapdict()
-#     #Q = Fibonacci_heap()
-#     for v in g.vs:
-#         if v['name'] == origin_pt:
-#             d = 0
-#             path = None
-#         else:
-#             d = np.inf
-#             path = None
-#         v['_dji_dist'] = d 
-#         v['_dji_prev_idx'] = path 
-#         v['_visited'] = False
-#         if v['name'] == origin_pt:
-#             Q[v] = v['_dji_dist']
-#             #v['_ref'] = Q.enqueue(v, v['_dji_dist'])
-        
-
-#     # Initialize current node
-#     cur_v, _ = Q.popitem()
-#     #cur_v = Q.dequeue_min().get_value()
-#     cur_pt = cur_v['name']
-#     start_idx = cur_v.index
-#     while cur_pt != target_pt:
-#         #print("cur_pt = {}".format(cur_pt))
-#         for next_v in cur_v.neighbors():
-#             #print("\tneighbor = {}".format(n['name']))
-#             if next_v['_visited']:
-#                 #print("\t\talready visited -- continue")
-#                 continue
-#             else:
-#                 if cur_v['_dji_prev_idx'] is None:
-#                     prev_v = None
-#                 else:
-#                     prev_v = g.vs[cur_v['_dji_prev_idx']]
-#                 marg_dist = cost_fn(g, cur_v, next_v, prev_v)
-#                 #marg_dist = distance(cur_pt, next_v['name'])
-#                 new_dist = marg_dist + cur_v['_dji_dist']
-#                 if new_dist < next_v['_dji_dist']:
-#                     # print("\t\tresetting path {} to {}".format(cur_v['_dji_prev_idx'], cur_v.index))
-#                     # print("\t\tdist from {} to {}".format(n['_dji_dist'], new_dist))
-#                     next_v['_dji_dist'] = new_dist
-#                     next_v['_dji_prev_idx'] = cur_v.index
-
-#                     # Update the priority in Q
-#                     Q[next_v] = new_dist 
-                    
-#         cur_v['_visited'] = True
-#         cur_v, _ = Q.popitem()
-#         #cur_v = Q.dequeue_min().get_value()
-#         cur_pt = cur_v['name']
-#         cur_idx = cur_v.index 
-
-#     #print("Found {} at {}: go back to idx {}".format(target_pt, cur_pt, cur_v['_dji_path']))
-
-#     # Clean up returned output
-#     rv = []
-#     if return_epath:
-#         vpath_indices = []
-#         epath_indices = []
-#         while cur_idx != start_idx:
-#             vpath_indices.append(cur_idx)
-#             parent_idx = cur_v['_dji_prev_idx']
-#             #print("Goal = {} | Between v{}-v{}".format(start_idx, cur_idx, parent_idx))
-#             cur_e = g.es.find(_between=((cur_idx,), (parent_idx,))).index
-#             #print("Between v{}-v{} is edge {}\n".format(cur_idx, parent_idx, cur_e))
-#             epath_indices.append(cur_e)
-#             cur_v = g.vs[parent_idx]
-#             cur_idx = cur_v.index
-#         rv.append(epath_indices)
-
-#     if return_dist:
-#         vpath_dist = g.vs.select(name=target_pt)['_dji_dist'][0]
-#         rv.append(vpath_dist)
-#     return rv 
-
-
-# def build_weighted_complete_graph(G: igraph.Graph, 
-#                                   terminal_vertices: igraph.EdgeSeq,
-#                                   cost_fn):
-#     H = PlanarGraph()
-#     combs_list = list(combinations(terminal_vertices, 2))
-#     print("Building metric closure...")
-#     for u,v in tqdm.tqdm(combs_list, total=len(combs_list)):
-#     #for u,v in combs_list:
-#         if not isinstance(u, tuple):
-#             u = u['name']
-#             v = v['name']
-#         #print("in build_weighted_complete_graph: {},{}".format(u, v))
-#         path_idxs, path_distance = shortest_path(g=G, origin_pt=u, 
-#                                                  target_pt=v, cost_fn=cost_fn)
-#         #print("...done")
-#         path_edges = G.es[path_idxs]
-#         kwargs = {'weight':path_distance, 'path':path_idxs}
-#         H.add_edge(u, v, **kwargs)
-#     return H 
-
-# def flex_steiner_tree(G: igraph.Graph, 
-#                       terminal_vertices: igraph.EdgeSeq,
-#                       cost_fn,
-#                       return_metric_closure: bool = False):
-#     '''
-#     terminal_nodes is List of igraph.Vertex
-#     '''
-
-#     # (1) Build closed graph of terminal_vertices where each weight is the shortest path distance
-#     H = build_weighted_complete_graph(G, 
-#                                       terminal_vertices, 
-#                                       cost_fn=cost_fn)
-
-#     # (2) Now get the MST of that complete graph of only terminal_vertices
-#     if "weight" not in H.es.attributes():
-#         print("----H graph does not have weight, ERROR")
-#         print("\t\t there are {}".format(len(terminal_vertices)))
-#     mst_edge_idxs = H.spanning_tree(weights='weight', return_tree=False)
-
-#     # Now, we join the paths for all the mst_edge_idxs
-#     steiner_edge_idxs = list(chain.from_iterable(H.es[i]['path'] for i in mst_edge_idxs))
-
-#     if return_metric_closure:
-#         return steiner_edge_idxs, H
-#     else:
-#         return steiner_edge_idxs
-
-# def shortest_path_orig(g, 
-#                   origin_pt, 
-#                   target_pt):
-    
-#     # Create bool attr for visited
-#     g.vs['visited'] = False
-#     #visited_indices = set()
-
-#     # Create dist attr
-#     g.vs['_dji_dist'] = np.inf 
-#     g.vs['_dji_path'] = [[]*len(g.vs['_dji_dist'])]
-#     g.vs.select(name=origin_pt)['_dji_dist'] = 0
-#     g.vs.select(name=origin_pt)['_dji_path'] = [[origin_pt]]
-
-#     # Initialize current node
-#     cur_pt = origin_pt
-#     cur_v = g.vs.select(name=cur_pt)[0]
-#     while cur_pt != target_pt:
-#         #print("ON {}".format(cur_pt))
-#         for n in cur_v.neighbors():
-#             if n['visited']:
-#                 continue
-#             else:
-#                 new_dist = cur_v['_dji_dist'] + distance(cur_pt, n['name'])
-#                 if new_dist < n['_dji_dist']:
-#                     #print("\tupdating dist to {} = {}".format(n['name'], new_dist))
-#                     n['_dji_dist'] = new_dist
-
-#                     # print(cur_v['_dji_path'])
-#                     n['_dji_path'] = cur_v['_dji_path'][:]
-#                     n['_dji_path'].append(n['name'])
-                    
-#         cur_v['visited'] = True
-#         argmin = np.argmin([x['_dji_dist'] for x in g.vs.select(visited=False)])
-#         cur_v = list(g.vs.select(visited=False))[argmin]
-#         cur_pt = cur_v['name']
-
-###############################################################################
-###############################################################################
 
 def angle_btwn(pt0, pt1, pt2, degrees=False) -> float:
     pt0 = np.array(pt0)
@@ -247,23 +79,9 @@ def angle_btwn(pt0, pt1, pt2, degrees=False) -> float:
         angle = np.degrees(angle)
     return angle
 
-def igraph_steiner_tree(G: PlanarGraph, 
-                        terminal_vertices: Sequence[igraph.Vertex], 
-                        ) -> Sequence[int]:
-    """
-    Steiner Tree approx on the graph G, where the terminal nodes are
-    determined by terminal_vertices. The graph must have a 'weight'
-    edge attr, which in the PlanarGraph class will default to the
-    Euclidean distance
-
-    Args:
-        G: source graph on which to estimate Steiner algorithm
-        terminal_vertices: target vertices
-
-    Returns:
-        Indices of the edges included in the Steiner approx
-    """
-
+def calc_metric_closure(G: PlanarGraph,
+                   terminal_vertices: Sequence[igraph.Vertex],
+                   ) -> PlanarGraph:
     # Build closed graph of terminal_vertices where each weight is the shortest path distance
     H = PlanarGraph()
     for u,v in combinations(terminal_vertices, 2):
@@ -272,17 +90,8 @@ def igraph_steiner_tree(G: PlanarGraph,
         path_distance = reduce(lambda x,y : x+y, map(lambda x: x['weight'], path_edges))
         kwargs = {'weight':path_distance, 'path':path_idxs[0]}
         H.add_edge(u['name'], v['name'], **kwargs)
+    return H
 
-    # Now get the MST of that complete graph of only terminal_vertices
-    if "weight" not in H.es.attributes():
-        print("----H graph does not have weight, ERROR")
-        print("\t\t there are {}".format(len(terminal_vertices)))
-    mst_edge_idxs = H.spanning_tree(weights='weight', return_tree=False)
-
-    # Now, we join the paths for all the mst_edge_idxs
-    steiner_edge_idxs = list(chain.from_iterable(H.es[i]['path'] for i in mst_edge_idxs))
-
-    return steiner_edge_idxs
 
 def distance_meters(a0, a1):
     """Helper for getting spatial dist from lon/lat"""
@@ -395,15 +204,19 @@ def vector_projection(edge_tuple, coords):
 
 class PlanarGraph(igraph.Graph):
 
-    @staticmethod
-    def from_edges(edges):
-        graph = PlanarGraph()
+    @classmethod
+    def from_edges(cls: Type, 
+                   edges: Sequence[Tuple[float, float]],
+                   ) -> PlanarGraph:
+        graph = cls()
         for edge in edges:
             graph.add_edge(*edge)
         return graph
 
-    @staticmethod
-    def from_multipolygon(cls: Type, multipolygon: MultiPolygon):
+    @classmethod
+    def from_multipolygon(cls: Type, 
+                          multipolygon: MultiPolygon,
+                          ) -> PlanarGraph:
         """
         Factory method for creating a graph representation of 
         a multipolygon
@@ -426,7 +239,9 @@ class PlanarGraph(igraph.Graph):
 
 
     @classmethod
-    def from_multilinestring(cls: Type, multilinestring: MultiLineString):
+    def from_multilinestring(cls: Type, 
+                             multilinestring: MultiLineString,
+                             ) -> PlanarGraph:
         """
         Factory method for creating a graph representation of 
         a multilinestring
@@ -446,48 +261,6 @@ class PlanarGraph(igraph.Graph):
                     pgraph.add_edge(n, nodes[i-1])
 
         return pgraph
-
-    # @staticmethod
-    # def load_planar(file_path):
-    #     '''
-    #     Loads a planar graph from a saved via
-    #     '''
-
-    #     # The mapping to recover coord is stored separately
-    #     file_path_mapping = file_path+".dict"
-    #     assert os.path.isfile(file_path_mapping), "There should be a corresponding .dict file associated with the graphml file"
-    #     with open(file_path_mapping, 'rb') as file:
-    #         idx_mapping = pickle.load(file)
-
-    #     # Now load the graphML file and join
-    #     graph = PlanarGraph.Read_GraphML(file_path)
-    #     graph.vs['name'] = [idx_mapping[i] for i in graph.vs['id']]
-    #     del graph.vs['id']
-
-    #     return graph
-
-    # def save_planar(self, file_path):
-    #     '''
-    #     Pickling the object wasn't working and saving as
-    #     GraphML does. However, this can only maintain simple
-    #     boolean, string, numeric attributes so we create a dictionary
-    #     which can recover the lost coordinate pairs (which are python tuples) 
-    #     '''
-
-    #     # with open(file_path, 'wb') as file:
-    #     #     pickle.dump(self, file)
-    #     # Save out idx->coord mapping
-    #     idx_mapping = {}
-    #     for i, v in enumerate(self.vs):
-    #         idx = "n{}".format(i)
-    #         idx_mapping[idx] = v['name']
-    #     file_path_mapping = file_path+".dict"
-    #     with open(file_path_mapping, 'wb') as file:
-    #         pickle.dump(idx_mapping, file)
-
-    #     # Save out the graph
-    #     self.save(file_path, format='graphml')
-
 
     def add_node(self, 
                  coords: Tuple[float, float], 
@@ -639,19 +412,6 @@ class PlanarGraph(igraph.Graph):
             edge_list.append(edge)
         return edge_list 
 
-    # def edges_in_parcel(self, parcel_id: int) -> igraph.EdgeSeq:
-    #     '''
-    #     Given a parcel_id, returns edge seq of
-    #     all edges associated with that parcel. 
-    #     NOTE: an edge is either in 1-2 parcels
-    #     '''
-    #     def fn(e: igraph.Edge):
-    #         if e['parcel_id'] is None:
-    #             return False
-    #         else:
-    #             return (parcel_id in e['parcel_id'])
-    #     return self.es.select(fn)
-
     def coords_to_edge(self, 
                        coord0: Tuple[float, float], 
                        coord1: Tuple[float, float],
@@ -744,23 +504,6 @@ class PlanarGraph(igraph.Graph):
         debug("Found {}/{} possible edges thru {} tries".format(len(edges), len(self.es), i))
         return edges 
 
-    # def add_bldg_centroid(self, pt: Point, e: igraph.Edge):
-    #     '''
-    #     Adding the building centroid at pt to the edge, e. First,
-    #     find the point on e closest to the pt, and that's where
-    #     we add.
-    #     '''
-
-    #     edge_coord_tuple = [v['name'] for v in e.vertex_tuple]
-    #     pt_coord_tuple = list(pt.coords)[0]
-    #     #print("edge_coord_tuple: {}".format(edge_coord_tuple))
-    #     #print("edge_coord_tuple type: {}".format(type(edge_coord_tuple)))
-    #     closest_node = PlanarGraph.closest_point_to_node(edge_coord_tuple, pt_coord_tuple)
-
-    #     # Now add it
-    #     self.split_edge_by_node(edge_coord_tuple, closest_node, terminal=True)
-
-
     def add_node_to_closest_edge(self, 
                                  coords: Tuple[float, float], 
                                  terminal: bool=False, 
@@ -815,6 +558,117 @@ class PlanarGraph(igraph.Graph):
         # Now add it
         self.split_edge_by_node(closest_edge, closest_node, terminal=terminal)
 
+    def update_edge_types(self, 
+                          block_polygon: Polygon, 
+                          check: bool=False, 
+                          lines_pgraph: PlanarGraph=None,
+                          ) -> Tuple[int, int]:
+        """
+        When reblocking, existing roads receive 0 weight. Existing roads
+        are captured in the block_polygon, so given a graph and a 
+        block_geometry, this updates the edge types of the graph as
+        either existing / new. Then it updates the weights.
+        Graph is updated in place.
+
+        Args:
+            self: graph repr of parcel boundaries
+            block_geom: Polygon of block geometry
+            check: If true, verify that each point in the block is in fact in the parcel
+            lines_pgraph: NA - will be deprecated
+
+        Returns:
+            Updates graph in place. Returns summary of matching
+            check between parcel and block
+        """
+        block_coords_list = list(block_polygon.exterior.coords)
+        coords = set(block_coords_list)
+
+        rv = (None, None)
+        missing = None
+        total = None
+        
+        # Option to verify that each point in the block is in fact in the parcel
+        if check:
+            parcel_coords = set(v['name'] for v in self.vs)
+            total = 0
+            is_in = 0
+            for coord in coords:
+                is_in = is_in+1 if coord in parcel_coords else is_in 
+                total += 1
+            missing = total-is_in
+            if missing != 0:
+                warning("{} of {} block coords are NOT in the parcel coords".format(missing, total)) 
+
+        # Get list of coord_tuples from the polygon
+        assert block_coords_list[0] == block_coords_list[-1], "Not a complete linear ring for polygon"
+
+        # Loop over the block coords (as define an edge) and update the corresponding edge type in the graph accordingly
+        # NOTE: every block coord will be within the parcel graph vertices
+        for i, n0 in enumerate(block_coords_list):
+            if i==0:
+                continue
+            else:
+                n1 = block_coords_list[i-1]
+                u_list = self.vs.select(name_eq=n0)
+                v_list = self.vs.select(name_eq=n1)
+                if len(u_list) > 0 and len(v_list) > 0:
+                    u = u_list[0]
+                    v = v_list[0]
+                    path_idxs = self.get_shortest_paths(u, v, weights='weight', output='epath')[0]
+
+                    # the coords u and v from the block are
+                    if lines_pgraph is None:
+                        self.es[path_idxs]['edge_type'] = 'highway'
+                    else:
+                        pass 
+                        # ft_type = get_feature_type_from_lines(lines_pgraph, n0, n1 )
+                        # self.es[path_idxs]['edge_type'] = 'new'
+
+                        # # Now view our new graph
+                        # parcel_df = convert_to_gpd(self)
+                        # print("\n\n changing to {}".format(ft_type))
+                        # plot_types(parcel_df)
+                        # plt.show()
+                        # self.es[path_idxs]['edge_type'] = ft_type
+
+        self.es.select(edge_type_eq='highway')['weight'] = 0
+
+        # WATERWAY_WEIGHT = NATURAL_WEIGHT = 1e4  # Not currently active
+        # parcel_graph.es.select(edge_type_eq='waterway')['weight'] = WATERWAY_WEIGHT
+        # parcel_graph.es.select(edge_type_eq='natural')['weight'] = NATURAL_WEIGHT
+
+        rv = (missing, total)
+        return rv 
+
+
+    def calc_steiner_tree(self, 
+                            terminal_vertices: Sequence[igraph.Vertex], 
+                            ) -> Sequence[int]:
+        """
+        Steiner Tree approx on the graph G, where the terminal nodes are
+        determined by terminal_vertices. The graph must have a 'weight'
+        edge attr, which in the PlanarGraph class will default to the
+        Euclidean distance
+
+        Args:
+            terminal_vertices: target vertices
+
+        Returns:
+            Indices of the edges included in the Steiner approx
+        """
+        H = calc_metric_closure(self, terminal_vertices)
+
+        # Now get the MST of that complete graph of only terminal_vertices
+        if "weight" not in H.es.attributes():
+            print("----H graph does not have weight, ERROR")
+            print("\t\t there are {}".format(len(terminal_vertices)))
+        mst_edge_idxs = H.spanning_tree(weights='weight', return_tree=False)
+
+        # Now, we join the paths for all the mst_edge_idxs
+        steiner_edge_idxs = list(chain.from_iterable(H.es[i]['path'] for i in mst_edge_idxs))
+
+        return steiner_edge_idxs, H
+
     def steiner_tree_approx(self, verbose: bool=False) -> None:
         """
         All Nodes within the graph have an attribute, Node.terminal, which is a boolean
@@ -831,53 +685,56 @@ class PlanarGraph(igraph.Graph):
         """
         terminal_nodes = self.vs.select(terminal_eq=True)
 
-        steiner_edge_idxs = igraph_steiner_tree(self, terminal_nodes)
+        steiner_edge_idxs, metric_closure = self.calc_steiner_tree(terminal_nodes)
         for i in steiner_edge_idxs:
             self.es[i]['steiner'] = True 
 
-    # def flex_steiner_tree_approx(self, 
-    #                              cost_fn, 
-    #                              return_metric_closure: bool = True):
-    #     '''
-    #     MAYBE THIS WILL BE DEPRECATED???
-    #     All Nodes within the graph have an attribute, Node.terminal, which is a boolean
-    #     denoting whether they should be included in the set of terminal_nodes which
-    #     are connected by the Steiner Tree approximation
-    #     '''
-    #     terminal_nodes = self.vs.select(terminal_eq=True)
+    def add_through_lines(self,
+        ratio_cutoff: float,
+        orig_metric_closure: PlanarGraph=None,
+        ) -> List[LineString]:
+        '''
+        This adds through streets to a reblocked graph. The orig_metric_closure
+        already contains the shortest paths (both path and distance) from
+        the original graph. This fn extracts the optimal subgraph from the
+        original graph, then calculates the new metric closure. If the ratio
+        of the original shortest path distance to the new shortest path 
+        distance is low enough, then we can connect these two vertices
+        and increase connectivity, creating a through-street.
 
-    #     rv = flex_steiner_tree(self, 
-    #                            terminal_nodes, 
-    #                            cost_fn = cost_fn,
-    #                            return_metric_closure = return_metric_closure)
+        NOTE: adds 'is_through_line' to PlanarGraph.es attributes
+        '''
+        if orig_metric_closure is None:
+            terminal_vertices = self.vs.select(terminal_eq=True)
+            orig_metric_closure = calc_metric_closure(self, terminal_vertices)
+        steiner_edges = self.es.select(steiner_eq=True)
+        opt_subgraph = self.subgraph_edges(steiner_edges)
+        opt_metric_closure = calc_metric_closure(opt_subgraph, 
+                                                 opt_subgraph.vs.select(terminal_eq=True),
+                                                 )
 
-    #     if return_metric_closure:
-    #         steiner_edge_idxs, metric_closure = rv
-    #     else:
-    #         steiner_edge_idxs = rv  
-    #         metric_closure = None  
+        # Get ratio of orig/new shortest path distance
+        combs_list = list(combinations(orig_metric_closure.vs, 2))
+        for v0, v1 in combs_list:
+            e_orig = orig_metric_closure.es.select(_within=[v0.index, v1.index])[0]
+            e_opt = opt_metric_closure.es.select(_within=[v0.index, v1.index])[0]
 
-    #     for i in steiner_edge_idxs:
-    #         self.es[i]['steiner'] = True 
+            e_orig['ratio'] = e_orig['weight'] / e_opt['weight']
 
-    #     return metric_closure
+        # Get edges over a certain threshold, and add the 
+        #     paths from the original metric closure to our reblock data
+        cutoff = ratio_cutoff
+        post_process_lines = []
+        self.es['is_through_line'] = False
 
-    # def get_plot_style(self):
-    #     vtx_color_map = {True: 'red', False: 'blue'}
-    #     edg_color_map = {True: 'red', False: 'blue'}
+        debug("Adding thru lines, ratios are: {}".format(orig_metric_closure.es['ratio']))
+        for e in orig_metric_closure.es.select(ratio_lt = cutoff):
+            edge_path = self.es[e['path']]
+            edge_path['is_through_line'] = True 
+            path_linestring = edge_seq_to_linestring(edge_path, self)
+            post_process_lines.append(path_linestring)
+        return post_process_lines
 
-    #     visual_style = {}
-
-    #     if 'terminal' in self.vs.attributes():
-    #         visual_style['vertex_color'] = [vtx_color_map[t] for t in self.vs['terminal'] ]
-        
-    #     if 'steiner' in self.es.attributes():
-    #         visual_style['edge_color'] = [edg_color_map[t] for t in self.es['steiner'] ]
-    #         #print(visual_style)
-
-    #     visual_style['layout'] = [(x[0],-x[1]) for x in self.vs['name']]
-        
-    #     return visual_style
 
     def plot_reblock(self, output_file, visual_style=None):
 
@@ -1026,14 +883,6 @@ class PlanarGraph(igraph.Graph):
         multi_point = unary_union(points)
         return multi_point
 
-    # def get_linestrings(self) -> MultiLineString:
-    #     '''
-    #     Takes the Steiner optimal edges from g and converts them
-    #     '''
-    #     lines = [LineString(self.edge_to_coords(e)) for e in self.es]
-    #     multi_line = unary_union(lines)
-    #     return multi_line 
-
     def _simplify_node(self, vertex: igraph.Vertex) -> None:
         """
         If we simplify node B with connections A -- B -- C
@@ -1159,7 +1008,8 @@ class PlanarGraph(igraph.Graph):
         all_visited = set()
 
         debug("Simplifying edge width...")
-        for v in tqdm.tqdm(self.vs):
+        #for v in tqdm.tqdm(self.vs):
+        for v in self.vs:
             neighbors = v.neighbors()
             num_neighbors = len(neighbors)
             if num_neighbors == 2:
@@ -1244,33 +1094,7 @@ class PlanarGraph(igraph.Graph):
             del self.es['width']
         if not has_edge_type and "edge_type" in self.es.attributes():
             del self.es['edge_type']
-
-    # def set_node_angles(self, save_degree=True, format='degrees'):
-    #     '''
-    #     Adds following properties:
-    #         To vertices:
-    #             - angles: dict mapping nbors to angle
-    #             - degree: number of neighbors
-    #     '''
-    #     assert format in {'degrees', 'radians'}, "Degree format must be one of |degrees| or |radians|"
-    #     as_degrees = format == 'degrees'
-    #     for v in self.vs:
-    #         neighbors = v.neighbors()
-    #         angle_dict = {}
-    #         for n0 in neighbors:
-    #             for n1 in neighbors:
-    #                 if n0 is n1:
-    #                     continue
-    #                 elif (n1, n0) in angle_dict:
-    #                     continue
-    #                 else:
-    #                     angle = angle_btwn(n0['name'], v['name'], n1['name'], degrees=as_degrees)
-    #                     angle_dict[(n0.index, n1.index)] = angle 
-    #         v['angles'] = angle_dict 
-    #         if save_degree:
-    #             v['degree'] = len(neighbors)
-    # ###################################################
-        
+       
 
 
 # def convert_to_lines(planar_graph) -> MultiLineString:

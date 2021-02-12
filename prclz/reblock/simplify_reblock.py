@@ -20,58 +20,58 @@ def to_gdf(geom):
         return  gpd.GeoDataFrame.from_dict({'geometry': geom})
     else:
         return  gpd.GeoDataFrame.from_dict({'geometry': [geom]})
-#####################################################################
-## Functions for adding thru-streets after reblocking ###############
-def edge_seq_to_linestring(e_seq, graph):
+# #####################################################################
+# ## Functions for adding thru-streets after reblocking ###############
+# def edge_seq_to_linestring(e_seq, graph):
 
-    lines = []
-    for e in e_seq:
-        e_line = LineString(graph.edge_to_coords(e))
-        lines.append(e_line)
-    return unary_union(lines)
+#     lines = []
+#     for e in e_seq:
+#         e_line = LineString(graph.edge_to_coords(e))
+#         lines.append(e_line)
+#     return unary_union(lines)
 
-def get_through_lines(
-    planar_graph: i_topology.PlanarGraph,
-    orig_metric_closure: i_topology.PlanarGraph,
-    ratio_cutoff: float,
-    cost_fn: Callable,
-    ) -> List[LineString]:
-    '''
-    This adds through streets to a reblocked graph. The orig_metric_closure
-    already contains the shortest paths (both path and distance) from
-    the original graph. This fn extracts the optimal subgraph from the
-    original graph, then calculates the new metric closure. If the ratio
-    of the original shortest path distance to the new shortest path 
-    distance is low enough, then we can connect these two vertices
-    and increase connectivity, creating a through-street.
+# def get_through_lines(
+#     planar_graph: i_topology.PlanarGraph,
+#     orig_metric_closure: i_topology.PlanarGraph,
+#     ratio_cutoff: float,
+#     cost_fn: Callable,
+#     ) -> List[LineString]:
+#     '''
+#     This adds through streets to a reblocked graph. The orig_metric_closure
+#     already contains the shortest paths (both path and distance) from
+#     the original graph. This fn extracts the optimal subgraph from the
+#     original graph, then calculates the new metric closure. If the ratio
+#     of the original shortest path distance to the new shortest path 
+#     distance is low enough, then we can connect these two vertices
+#     and increase connectivity, creating a through-street.
 
-    NOTE: adds 'is_through_line' to PlanarGraph.es attributes
-    '''
-    steiner_edges = planar_graph.es.select(steiner_eq=True)
-    opt_subgraph = planar_graph.subgraph_edges(steiner_edges)
-    opt_metric_closure = i_topology.build_weighted_complete_graph(opt_subgraph,
-                                                                  opt_subgraph.vs.select(terminal_eq=True),
-                                                                  cost_fn)
+#     NOTE: adds 'is_through_line' to PlanarGraph.es attributes
+#     '''
+#     steiner_edges = planar_graph.es.select(steiner_eq=True)
+#     opt_subgraph = planar_graph.subgraph_edges(steiner_edges)
+#     opt_metric_closure = i_topology.build_weighted_complete_graph(opt_subgraph,
+#                                                                   opt_subgraph.vs.select(terminal_eq=True),
+#                                                                   cost_fn)
 
-    # Get ratio of orig/new shortest path distance
-    combs_list = list(combinations(orig_metric_closure.vs, 2))
-    for v0, v1 in combs_list:
-        e_orig = orig_metric_closure.es.select(_within=[v0.index, v1.index])[0]
-        e_opt = opt_metric_closure.es.select(_within=[v0.index, v1.index])[0]
+#     # Get ratio of orig/new shortest path distance
+#     combs_list = list(combinations(orig_metric_closure.vs, 2))
+#     for v0, v1 in combs_list:
+#         e_orig = orig_metric_closure.es.select(_within=[v0.index, v1.index])[0]
+#         e_opt = opt_metric_closure.es.select(_within=[v0.index, v1.index])[0]
 
-        e_orig['ratio'] = e_orig['weight'] / e_opt['weight']
+#         e_orig['ratio'] = e_orig['weight'] / e_opt['weight']
 
-    # Get edges over a certain threshold, and add the 
-    #     paths from the original metric closure to our reblock data
-    cutoff = ratio_cutoff
-    post_process_lines = []
-    planar_graph.es['is_through_line'] = False
-    for e in orig_metric_closure.es.select(ratio_lt = cutoff):
-        edge_path = planar_graph.es[e['path']]
-        edge_path['is_through_line'] = True 
-        path_linestring = edge_seq_to_linestring(edge_path, planar_graph)
-        post_process_lines.append(path_linestring)
-    return post_process_lines
+#     # Get edges over a certain threshold, and add the 
+#     #     paths from the original metric closure to our reblock data
+#     cutoff = ratio_cutoff
+#     post_process_lines = []
+#     planar_graph.es['is_through_line'] = False
+#     for e in orig_metric_closure.es.select(ratio_lt = cutoff):
+#         edge_path = planar_graph.es[e['path']]
+#         edge_path['is_through_line'] = True 
+#         path_linestring = edge_seq_to_linestring(edge_path, planar_graph)
+#         post_process_lines.append(path_linestring)
+#     return post_process_lines
 #####################################################################
 #####################################################################
 

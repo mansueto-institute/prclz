@@ -5,9 +5,17 @@ import unittest
 from logging import basicConfig, debug, info
 
 from prclz.reblock import i_topology
-from prclz.reblock.i_topology_utils import update_edge_types
+#from prclz.reblock.i_topology_utils import update_edge_types
 # import reblock2
 # from path_cost import FlexCost
+'''
+To-Do:
+ - Fix the through lines test. It doesn't actually have a 
+   possible path in the part we're expecting thru lines
+ - Get the simplify linestring part working, and tested
+ - Build out the momepy parcelization pipeline, and connect
+   that to our reblocking 
+'''
 
 
 def make_square(lower_left_pt, w=1):
@@ -209,7 +217,7 @@ class TestExistingSteinerApprox(unittest.TestCase):
         answer_exist0 = "MULTILINESTRING ((0 0, 0 1), (0 1, 1 1))"
         answer_exist1 = "MULTILINESTRING ((0 0, 1 0), (1 0, 1 1))"
         
-        update_edge_types(graph, block_polygon, check=True)
+        graph.update_edge_types(block_polygon, check=True)
         
         graph.steiner_tree_approx()
         graph_steiner = graph.get_steiner_linestrings(expand=False)
@@ -244,7 +252,7 @@ class TestWidthSteinerApprox(unittest.TestCase):
         graph.add_node_to_closest_edge((0,0), terminal=True)
         graph.add_node_to_closest_edge((1,1), terminal=True)
         
-        # A 'houses' that straddles the opt path very closely
+        # A 'house' that straddles the opt path very closely
         eps = 0.00001
         p0 = Polygon([(0.5, 0.5+eps),(0.55,0.55+eps),
                       (0.55,0.55+2*eps), (0.5,0.5+2*eps),
@@ -275,10 +283,62 @@ class TestWidthSteinerApprox(unittest.TestCase):
                       or new_steiner.equals(loads(answer_new1)))
         self.assertTrue(new_cond)
         self.assertTrue(exist_steiner.equals(loads(answer_exist)))
+        #print("\n\nDONE!!!")
+
+class TestAddingThruStreets(unittest.TestCase):
+    """
+    Because Steiner Alg leaves trees, we have the option to
+    connect trees. Test the add_through_lines method
+    """
+    SAVE = False
+    def _make_data(self):
+        multi = []
+
+        #multi.append(make_square((0,0), w=3))
+        multi.append(LineString([(0,0),(3,0),(3,3),(0,3),(0,1),(0,0)]))
+        multi.append(LineString([(0,1),(3,3)]))
+        multi.append(LineString([(0,0),(1,1)]))
+        multi.append(LineString([(2,2),(3,3)]))
+        graph = i_topology.PlanarGraph.from_multilinestring(multi)
+
+        graph.add_node_to_closest_edge((1,1), terminal=True)
+        graph.add_node_to_closest_edge((2,2), terminal=True)
+
+        return graph
+
+    def test_no_thru(self):
+        graph = self._make_data()
+        answer_new = "MULTILINESTRING ((0 0, 1 1), (0 0, 0 1), (0 1, 3 3), (3 3, 2 2))"
+        answer_exist = "GEOMETRYCOLLECTION EMPTY"
+
+        graph.steiner_tree_approx()
+        graph_steiner = graph.get_steiner_linestrings(expand=False)
+        new_steiner = graph_steiner[0]
+        exist_steiner = graph_steiner[1]
+
+        self.assertTrue(new_steiner.equals(loads(answer_new)))
+        self.assertTrue(exist_steiner.equals(loads(answer_exist)))
+
+    def test_add_thru(self):
+        graph = self._make_data()
+        answer_new = "MULTILINESTRING ((0 0, 3 3), (0 0, 0 1), (0 1, 3 3))"
+        answer_exist = "GEOMETRYCOLLECTION EMPTY"
+
+        graph.steiner_tree_approx()
+
+        # Now, add all thru-lines under certain threshold
+        graph.add_through_lines(0.5)
+
+        graph_steiner = graph.get_steiner_linestrings(expand=False)
+        new_steiner = graph_steiner[0]
+        exist_steiner = graph_steiner[1]
+
+        self.assertTrue(new_steiner.equals(loads(answer_new)))
+        self.assertTrue(exist_steiner.equals(loads(answer_exist)))
 
 
 if __name__ == "__main__":
-    #basicConfig(level='DEBUG')
+    basicConfig(level='WARNING')
     unittest.main()
 
 
