@@ -4,8 +4,8 @@ from shapely.wkt import loads
 import unittest
 from logging import basicConfig, debug, info
 
-from prclz.reblock import i_topology
-#from prclz.reblock.i_topology_utils import update_edge_types
+from prclz.reblock import planar_graph
+#from prclz.reblock.planar_graph_utils import update_edge_types
 # import reblock2
 # from path_cost import FlexCost
 '''
@@ -50,7 +50,7 @@ def create_test_grid(n):
                 multi.append(triangle)
             else:
                 multi.append(make_square((i,j), 1))
-    return i_topology.PlanarGraph.from_multilinestring(multi)
+    return planar_graph.PlanarGraph.from_multilinestring(multi)
 
 # def create_connected_grid():
 #     linestrings = []
@@ -58,7 +58,7 @@ def create_test_grid(n):
 #     linestrings.extend(make_grid((6,0), h=3,w=3,delta=1))
 #     connector = LineString([(3,0), (4,0), (5,0), (6,0)])
 #     linestrings.append(connector)
-#     g = i_topology.PlanarGraph.from_multilinestring(linestrings)
+#     g = planar_graph.PlanarGraph.from_multilinestring(linestrings)
 #     g.es['width'] = 5
 #     i = 1
 #     for e in g.es[[24, 25, 26]]:
@@ -92,21 +92,6 @@ def make_grids_w_targets():
         #grid.add_node_to_closest_edge(pt, terminal=True)
     grids = {2: grid2, 3: grid3, 4: grid4}
     return grids, block_polygon 
-
-# def plot_dji_test(block, output_filename):
-#     block_parcel = parcels[parcels['block_id']==block]
-#     block_bldgs = bldgs
-    
-#     ax = block_parcel.plot(color='black', alpha=0.3)
-#     ax = block_bldgs.plot(color='black', ax=ax)
-#     reblock_new = reblock_data[reblock_data['line_type']=='new']
-#     reblock_existing = reblock_data[reblock_data['line_type']=='existing']
-
-#     ax = reblock_existing.plot(color='green', ax=ax)
-#     ax = reblock_new.plot(color='red', ax=ax)
-#     ax = reblock_poly_data.plot(color='black', alpha=0.3, ax=ax)
-#     #ax.figure.savefig(str(Path("./test_dir") / output_filename))
-#     return ax
 
 class TestBasicSteinerApprox(unittest.TestCase):
     """
@@ -185,7 +170,7 @@ class TestExistingSteinerApprox(unittest.TestCase):
         multi = []
         multi.append(LineString([(0,0),(1,0),(1,1),(0,0)]))
         multi.append(LineString([(0,0),(1,1),(0,1),(0,0)]))
-        graph = i_topology.PlanarGraph.from_multilinestring(multi)
+        graph = planar_graph.PlanarGraph.from_multilinestring(multi)
         
         block_polygon = Polygon(make_square((0,0), 1))
         
@@ -247,7 +232,7 @@ class TestWidthSteinerApprox(unittest.TestCase):
         multi = []
         multi.append(LineString([(0,0),(1,0),(1,1),(0.5,0.5),(0,0)]))
         multi.append(LineString([(0,0),(0.5,0.5),(1,1),(0,1),(0,0)]))
-        graph = i_topology.PlanarGraph.from_multilinestring(multi)
+        graph = planar_graph.PlanarGraph.from_multilinestring(multi)
         graph.add_node_to_closest_edge((0,0), terminal=True)
         graph.add_node_to_closest_edge((1,1), terminal=True)
         
@@ -297,7 +282,7 @@ class TestAddingThruStreets(unittest.TestCase):
         multi.append(LineString([(0,0),(0.9,0.9)]))
         multi.append(LineString([(2.1,2.1),(3,3)]))
         multi.append(LineString([(0.9,0.9),(2.1,2.1)]))
-        graph = i_topology.PlanarGraph.from_multilinestring(multi)
+        graph = planar_graph.PlanarGraph.from_multilinestring(multi)
 
         graph.add_node_to_closest_edge((0.9,0.9), terminal=True)
         graph.add_node_to_closest_edge((2.1,2.1), terminal=True)
@@ -462,7 +447,7 @@ if __name__ == "__main__":
 
 # def add_buildings(parcel_poly_df: gpd.GeoDataFrame, 
 #                   building_list: List[Point],
-#                   planar_graph: i_topology.PlanarGraph,
+#                   planar_graph: planar_graph.PlanarGraph,
 #                   ):
 
 #     def cost_fn(centroid: Point, edge: igraph.Edge) -> float:
