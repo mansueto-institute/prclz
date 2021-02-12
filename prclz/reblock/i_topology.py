@@ -691,7 +691,7 @@ class PlanarGraph(igraph.Graph):
 
     def add_through_lines(self,
         ratio_cutoff: float,
-        orig_metric_closure: PlanarGraph=None,
+        cost_fn: Callable[[igraph.Edge], float]=None,
         ) -> List[LineString]:
         '''
         This adds through streets to a reblocked graph. The orig_metric_closure
@@ -704,22 +704,27 @@ class PlanarGraph(igraph.Graph):
 
         NOTE: adds 'is_through_line' to PlanarGraph.es attributes
         '''
-        if orig_metric_closure is None:
-            terminal_vertices = self.vs.select(terminal_eq=True)
-            orig_metric_closure = calc_metric_closure(self, terminal_vertices)
+        # Recalc edge weights, but save old weights to restore
+        orig_weights = self.es['weight'][:]
+        if cost_fn is None:
+            cost_fn = lambda e: e['eucl_dist']/e['width']
+        self.calc_edge_weight(cost_fn=cost_fn)
+
+        terminal_vertices = self.vs.select(terminal_eq=True)
+        orig_metric_closure = calc_metric_closure(self, terminal_vertices)
         steiner_edges = self.es.select(steiner_eq=True)
+        
         opt_subgraph = self.subgraph_edges(steiner_edges)
         opt_metric_closure = calc_metric_closure(opt_subgraph, 
                                                  opt_subgraph.vs.select(terminal_eq=True),
                                                  )
 
-        # Get ratio of orig/new shortest path distance
+        # Get ratio of new/orig shortest path distance
         combs_list = list(combinations(orig_metric_closure.vs, 2))
         for v0, v1 in combs_list:
             e_orig = orig_metric_closure.es.select(_within=[v0.index, v1.index])[0]
             e_opt = opt_metric_closure.es.select(_within=[v0.index, v1.index])[0]
-
-            e_orig['ratio'] = e_orig['weight'] / e_opt['weight']
+            e_orig['ratio'] = e_opt['weight'] / e_orig['weight']
 
         # Get edges over a certain threshold, and add the 
         #     paths from the original metric closure to our reblock data
@@ -727,12 +732,15 @@ class PlanarGraph(igraph.Graph):
         post_process_lines = []
         self.es['is_through_line'] = False
 
-        debug("Adding thru lines, ratios are: {}".format(orig_metric_closure.es['ratio']))
-        for e in orig_metric_closure.es.select(ratio_lt = cutoff):
+        info("Adding thru lines, ratios are: {}".format(orig_metric_closure.es['ratio']))
+        for e in orig_metric_closure.es.select(ratio_gt = cutoff):
             edge_path = self.es[e['path']]
             edge_path['is_through_line'] = True 
             path_linestring = edge_seq_to_linestring(edge_path, self)
             post_process_lines.append(path_linestring)
+
+        # Now reset to the original edge weights
+        self.es['weight'] = orig_weights
         return post_process_lines
 
 
@@ -798,7 +806,6 @@ class PlanarGraph(igraph.Graph):
         if edge_seq is None:
             edge_seq = self.es 
         for e in edge_seq:
-
             if 'is_through_line' in self.es.attributes():
                 is_opt = e['steiner'] or e['is_through_line']
             else:
@@ -1059,6 +1066,7 @@ class PlanarGraph(igraph.Graph):
 
     def calc_edge_weight(self,
                          cost_fn: Callable[[igraph.Edge], float]=None,
+                         use_edge_type: bool=True,
                          ) -> None:
         """
         Recalculates the Edge 'weight' attribute based on the other
@@ -1072,19 +1080,24 @@ class PlanarGraph(igraph.Graph):
         Args:
             cost_fn: A user-defined function taking in an edge as input, 
                      and returns weight based on the edge attrs
+            use_edge_type: changes the default cost_fn. If True, the
+                           default cost_fn assigns zero weight to existing
+                           roads. If False, edge_type has no affect
+                           Used internally for adding_through_lines, when
+                           the distinction btwn edge types is no longer valid
 
         Returns:
             Modifies graph in-place, no return value
         """
+        # Stand-in vals for use in default cost_fn
         has_edge_type = "edge_type" in self.es.attributes()
         has_width = "width" in self.es.attributes()
+        if not has_width:
+            self.es['width'] = 1
+        if not has_edge_type:
+            self.es['edge_type'] = [None]*len(self.es)
         
         if cost_fn is None:
-            # Stand-in vals for use in default cost_fn
-            if not has_width:
-                self.es['width'] = 1
-            if not has_edge_type:
-                self.es['edge_type'] = [None]*len(self.es)
             cost_fn = lambda e: (e['eucl_dist']/e['width']) * (not e['edge_type']=='highway')
 
         self.es['weight'] = [cost_fn(e) for e in self.es]

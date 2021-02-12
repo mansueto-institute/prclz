@@ -294,47 +294,59 @@ class TestAddingThruStreets(unittest.TestCase):
     def _make_data(self):
         multi = []
 
-        #multi.append(make_square((0,0), w=3))
-        multi.append(LineString([(0,0),(3,0),(3,3),(0,3),(0,1),(0,0)]))
-        multi.append(LineString([(0,1),(3,3)]))
-        multi.append(LineString([(0,0),(1,1)]))
-        multi.append(LineString([(2,2),(3,3)]))
+        multi.append(make_square((0,0), w=3))
+        multi.append(LineString([(0,0),(0.9,0.9)]))
+        multi.append(LineString([(2.1,2.1),(3,3)]))
+        multi.append(LineString([(0.9,0.9),(2.1,2.1)]))
         graph = i_topology.PlanarGraph.from_multilinestring(multi)
 
-        graph.add_node_to_closest_edge((1,1), terminal=True)
-        graph.add_node_to_closest_edge((2,2), terminal=True)
+        graph.add_node_to_closest_edge((0.9,0.9), terminal=True)
+        graph.add_node_to_closest_edge((2.1,2.1), terminal=True)
+        graph.add_node_to_closest_edge((0,1), terminal=True)
 
-        return graph
+        block_poly = Polygon(make_square((0,0), w=3))
+
+        return graph, block_poly
 
     def test_no_thru(self):
-        graph = self._make_data()
-        answer_new = "MULTILINESTRING ((0 0, 1 1), (0 0, 0 1), (0 1, 3 3), (3 3, 2 2))"
-        answer_exist = "GEOMETRYCOLLECTION EMPTY"
+        graph, block_poly = self._make_data()
+        answer_new = "MULTILINESTRING ((0 0, 0.9 0.9), (2.1 2.1, 3 3))"
+        answer_exist0 = "MULTILINESTRING ((0 0, 0 3), (0 3, 3 3))"
+        answer_exist1 = "MULTILINESTRING ((3 3, 3 0), (3 0, 0 0))"
 
+        graph.update_edge_types(block_poly, check=True)
         graph.steiner_tree_approx()
         graph_steiner = graph.get_steiner_linestrings(expand=False)
         new_steiner = graph_steiner[0]
         exist_steiner = graph_steiner[1]
 
         self.assertTrue(new_steiner.equals(loads(answer_new)))
-        self.assertTrue(exist_steiner.equals(loads(answer_exist)))
+
+        exist_cond = (exist_steiner.equals(loads(answer_exist0)) or
+                      exist_steiner.equals(loads(answer_exist1)))
+        self.assertTrue(exist_cond)
 
     def test_add_thru(self):
-        graph = self._make_data()
-        answer_new = "MULTILINESTRING ((0 0, 3 3), (0 0, 0 1), (0 1, 3 3))"
-        answer_exist = "GEOMETRYCOLLECTION EMPTY"
+        graph, block_poly = self._make_data()
+        answer_new = "MULTILINESTRING ((0 0, 3 3))"
+        answer_exist0 = "MULTILINESTRING ((0 0, 0 3), (0 3, 3 3))"
+        answer_exist1 = "MULTILINESTRING ((3 3, 3 0), (3 0, 0 0))"
 
+        graph.update_edge_types(block_poly, check=True)
         graph.steiner_tree_approx()
 
-        # Now, add all thru-lines under certain threshold
-        graph.add_through_lines(0.5)
+        graph.add_through_lines(ratio_cutoff=2)
 
         graph_steiner = graph.get_steiner_linestrings(expand=False)
         new_steiner = graph_steiner[0]
         exist_steiner = graph_steiner[1]
 
         self.assertTrue(new_steiner.equals(loads(answer_new)))
-        self.assertTrue(exist_steiner.equals(loads(answer_exist)))
+
+        exist_cond = (exist_steiner.equals(loads(answer_exist0)) or
+                      exist_steiner.equals(loads(answer_exist1)))
+        self.assertTrue(exist_cond)
+
 
 
 if __name__ == "__main__":
