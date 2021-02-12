@@ -2,7 +2,7 @@ import argparse
 import os
 import time
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Callable
 import geopandas as gpd
 import igraph
 import numpy as np
@@ -14,7 +14,7 @@ from shapely.geometry import (LinearRing, LineString, MultiLineString,
                               MultiPoint, MultiPolygon, Point, Polygon)
 from logging import basicConfig, debug, info, warning, error
 
-from .i_topology import PlanarGraph
+from .planar_graph import PlanarGraph
 
 def block_to_gadm(block: str) -> str:
     """Just grabs the GADM from a block"""
@@ -140,7 +140,7 @@ def reblock(parcels: MultiLineString,
             block: Polygon,
             use_width: bool=False,
             simplify: bool=False,
-            ) -> Tuple[MultiLineString, MultiLineString]:
+            ) -> Tuple[PlanarGraph, MultiLineString, MultiLineString]:
     # [1] Bldg poly -> bldg centroids
     bldg_centroids = [b.centroid for b in buildings]
 
@@ -155,30 +155,51 @@ def reblock(parcels: MultiLineString,
     bldg_centroids = add_outside_node(block, bldg_centroids)
 
     # [4] Convert parcel -> PlanarGraph
-    planar_graph = PlanarGraph.from_multilinestring(parcels)
+    graph = PlanarGraph.from_multilinestring(parcels)
 
     # [5] Add bldg centroids to PlanarGraph as terminal nodes
-    add_buildings(planar_graph, bldg_centroids)
+    add_buildings(graph, bldg_centroids)
 
     # [6] Update the edge types to denote existing streets, per block geometry
-    planar_graph.update_edge_types(block, check=True)
+    graph.update_edge_types(block, check=True)
 
     # [7 Optional] Add width to PlanarGraph based on bldg geoms
     if use_width:
-        planar_graph.set_edge_width(buildings, simplify=True)
-        planar_graph.calc_edge_weight()
+        graph.set_edge_width(buildings, simplify=True)
+        graph.calc_edge_weight()
 
     # [8] Clean graph if it's disconnected
-    planar_graph, num_components = clean_graph(planar_graph)
+    graph, num_components = clean_graph(graph)
 
     # [9 Optional] Simplify the vertex structure
     if simplify:
-        planar_graph.simplify()
+        graph.simplify()
 
     # [10] Steiner Approximation
-    planar_graph.steiner_tree_approx()
+    graph.steiner_tree_approx()
 
     # [11] Extract optimal paths from graph and return
-    new_path, existing_path = planar_graph.get_steiner_linestrings(expand=simplify)
+    new_path, existing_path = graph.get_steiner_linestrings(expand=simplify)
 
-    return planar_graph, new_path, existing_path
+    return graph, new_path, existing_path
+
+def add_thru_streets(graph: PlanarGraph,
+                     top_k: int=None,
+                     ratio_cutoff: float=None,
+                     cost_fn: Callable[[igraph.Edge], float]=None,
+                     ) -> Tuple[PlanarGraph, MultiLineString, MultiLineString]:
+    graph.add_through_lines(top_k=top_k,
+                            ratio_cutoff=ratio_cutoff,
+                            cost_fn=cost_fn,
+                            )
+    new_path, existing_path = graph.get_steiner_linestrings(expand=False)
+    return graph, new_path, existing_path
+
+def simplify_streets(
+    graph: PlanarGraph,
+    ) -> Tuple[PlanarGraph, MultiLineString, MultiLineString]:
+    
+    simplified_linestrings = graph.simplify_reblocked_graph()
+    return simplified_linestrings
+
+

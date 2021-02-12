@@ -18,7 +18,7 @@ from shapely.ops import cascaded_union
 from shapely.wkt import loads
 
 from ..etl.commons import build_data_dir
-from .i_topology import PlanarGraph
+from .planar_graph import PlanarGraph
 
 def to_gdf(shape):
     if isinstance(shape, list):

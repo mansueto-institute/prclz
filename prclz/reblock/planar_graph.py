@@ -230,6 +230,10 @@ def vector_projection(edge_tuple, coords):
 
 class PlanarGraph(igraph.Graph):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.simplified = False
+
     @classmethod
     def from_edges(cls: Type, 
                    edges: Sequence[Tuple[float, float]],
@@ -716,7 +720,8 @@ class PlanarGraph(igraph.Graph):
             self.es[i]['steiner'] = True 
 
     def add_through_lines(self,
-        ratio_cutoff: float,
+        top_k: int=None,
+        ratio_cutoff: float=None,
         cost_fn: Callable[[igraph.Edge], float]=None,
         ) -> List[LineString]:
         '''
@@ -754,16 +759,27 @@ class PlanarGraph(igraph.Graph):
 
         # Get edges over a certain threshold, and add the 
         #     paths from the original metric closure to our reblock data
-        cutoff = ratio_cutoff
         post_process_lines = []
         self.es['is_through_line'] = False
 
-        info("Adding thru lines, ratios are: {}".format(orig_metric_closure.es['ratio']))
-        for e in orig_metric_closure.es.select(ratio_gt = cutoff):
-            edge_path = self.es[e['path']]
-            edge_path['is_through_line'] = True 
-            path_linestring = edge_seq_to_linestring(edge_path, self)
-            post_process_lines.append(path_linestring)
+        if top_k is not None:
+            info("Selecting the top-{} ratios".format(top_k))
+            ratios = orig_metric_closure.es['ratio'][:]
+            ranking = np.argsort(ratios)[::-1][:int(top_k)]
+            for idx in ranking:
+                e = orig_metric_closure.es[idx]
+                edge_path = self.es[e['path']]
+                edge_path['is_through_line'] = True 
+                path_linestring = edge_seq_to_linestring(edge_path, self)
+                post_process_lines.append(path_linestring)
+
+        elif ratio_cutoff is not None:
+            info("Adding thru lines, ratios are: {}".format(orig_metric_closure.es['ratio']))
+            for e in orig_metric_closure.es.select(ratio_gt = ratio_cutoff):
+                edge_path = self.es[e['path']]
+                edge_path['is_through_line'] = True 
+                path_linestring = edge_seq_to_linestring(edge_path, self)
+                post_process_lines.append(path_linestring)
 
         # Now reset to the original edge weights
         self.es['weight'] = orig_weights
@@ -976,6 +992,7 @@ class PlanarGraph(igraph.Graph):
             num_neighbors = len(v.neighbors())
             if num_neighbors == 2 and not v['terminal']:
                 self._simplify_node(v)
+        self.simplified = True
 
     def to_pieces(self) -> List[List[int]]:
         '''
@@ -991,7 +1008,7 @@ class PlanarGraph(igraph.Graph):
                 neighbors = v.neighbors()
                 num_neighbors = len(neighbors)
                 if num_neighbors == 2:
-                    cont_vs = self.search_continuous_edge(v)
+                    cont_vs = self._search_continuous_edge(v)
                     for v in cont_vs:
                         all_visited_idxs.add(v)
                     piece_list.append(cont_vs)
