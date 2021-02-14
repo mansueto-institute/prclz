@@ -48,4 +48,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     basicConfig(level = "INFO")
-    get_GADM_data(vars(args))
+    fetch_data(vars(args))
