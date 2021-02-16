@@ -21,13 +21,16 @@ def test_logging():
     debug("debug")
 
 @prclz.command()
-@click.argument("datasource", type = click.Choice(["gadm", "geofabrik"], case_sensitive = False)) 
+@click.argument("datasource", type = str, nargs = 1) 
 @click.argument("directory",  type = click.Path(exists = True))  
-@click.argument("countries",  default = None, required = False, nargs = -1)
-@click.option("--overwrite",  help = "overwrite existing files", default = False, is_flag = True)
+@click.option("--countries", help = "comma-delimited list of GADM codes to filter", default = None, required = False)
+@click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
 def download(datasource, directory, countries, overwrite):
     """ Download upstream data files. """
-    download.main(datasource, directory, countries, overwrite)
+    click.echo((datasource, directory, countries, overwrite))
+    if datasource.lower() not in ["gadm", "geofabrik"]:
+        raise click.BadParameter("Datasource must be one of [gadm|geofabrik]")
+    download.main(datasource.lower(), directory, countries.split(",") if countries else countries, overwrite)
 
 @prclz.command()
 def split_geojson():
