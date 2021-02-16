@@ -334,7 +334,7 @@ class TestAddingThruStreets(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    basicConfig(level='WARNING')
+    basicConfig(level='DEBUG')
     unittest.main()
 
 

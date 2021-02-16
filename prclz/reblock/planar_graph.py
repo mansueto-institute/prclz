@@ -1,27 +1,18 @@
-import argparse
-import os
-import sys
-import time
-import typing
 from functools import reduce
 from itertools import chain, combinations, permutations
 from typing import List, Sequence, Tuple, Union, Type, Set, Callable
 from logging import debug, info, warning, error
 from pathlib import Path 
-
 import geopandas as gpd
+import pandas as pd
 import geopy.distance as gpy
 import igraph
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import tqdm
 from shapely.geometry import (LinearRing, LineString, MultiLineString,
                               MultiPoint, MultiPolygon, Point, Polygon)
 from shapely.ops import cascaded_union, unary_union, linemerge
 from shapely.wkt import loads
-
-from ..etl.commons import build_data_dir
 
 BUF_EPS = 1e-4
 BUF_RATE = 2
@@ -531,7 +522,7 @@ class PlanarGraph(igraph.Graph):
             buffered_point = point.buffer(buf)
             edges = self.es.select(lambda e: e['linestring'].intersects(buffered_point))
             i += 1
-        debug("Found {}/{} possible edges thru {} tries".format(len(edges), len(self.es), i))
+        debug("Found %s/%s possible edges thru %s tries", len(edges), len(self.es), i)
         return edges 
 
     def add_node_to_closest_edge(self, 
@@ -588,6 +579,38 @@ class PlanarGraph(igraph.Graph):
         # Now add it
         self.split_edge_by_node(closest_edge, closest_node, terminal=terminal)
 
+    def add_buildings(self: PlanarGraph, 
+                      bldg_centroids: List[Point],
+                      ) -> PlanarGraph:
+        """Add bldg centroids to planar graph"""
+
+        total_blgds = len(bldg_centroids)
+        for i, bldg_node in enumerate(bldg_centroids):
+            self.add_node_to_closest_edge(bldg_node, terminal=True)
+
+        if total_blgds > 0:
+            self._cleanup_linestring_attr()
+        #return graph 
+
+    def clean_graph(self) -> PlanarGraph:
+        """
+        Some graphs are malformed bc of bad geometries and 
+        we take the largest connected subgraph
+        """
+        is_conn = self.is_connected()
+        if is_conn:
+            num_components = 1
+        else:
+            components = self.components(mode=igraph.WEAK)
+            num_components = len(components)
+            comp_sizes = [len(idxs) for idxs in components]
+            arg_max = np.argmax(comp_sizes)
+            comp_indices = components[arg_max]
+        
+            self = self.subgraph(comp_indices)
+        info("Graph contains %s components", num_components)
+        return num_components
+
     def update_edge_types(self, 
                           block_polygon: Polygon, 
                           check: bool=False, 
@@ -627,7 +650,7 @@ class PlanarGraph(igraph.Graph):
                 total += 1
             missing = total-is_in
             if missing != 0:
-                warning("{} of {} block coords are NOT in the parcel coords".format(missing, total)) 
+                warning("%s of %s block coords are NOT in the parcel coords", missing, total)
 
         # Get list of coord_tuples from the polygon
         assert block_coords_list[0] == block_coords_list[-1], "Not a complete linear ring for polygon"
@@ -651,21 +674,8 @@ class PlanarGraph(igraph.Graph):
                         self.es[path_idxs]['edge_type'] = 'highway'
                     else:
                         pass 
-                        # ft_type = get_feature_type_from_lines(lines_pgraph, n0, n1 )
-                        # self.es[path_idxs]['edge_type'] = 'new'
-
-                        # # Now view our new graph
-                        # parcel_df = convert_to_gpd(self)
-                        # print("\n\n changing to {}".format(ft_type))
-                        # plot_types(parcel_df)
-                        # plt.show()
-                        # self.es[path_idxs]['edge_type'] = ft_type
 
         self.es.select(edge_type_eq='highway')['weight'] = 0
-
-        # WATERWAY_WEIGHT = NATURAL_WEIGHT = 1e4  # Not currently active
-        # parcel_graph.es.select(edge_type_eq='waterway')['weight'] = WATERWAY_WEIGHT
-        # parcel_graph.es.select(edge_type_eq='natural')['weight'] = NATURAL_WEIGHT
 
         rv = (missing, total)
         return rv 
@@ -690,8 +700,8 @@ class PlanarGraph(igraph.Graph):
 
         # Now get the MST of that complete graph of only terminal_vertices
         if "weight" not in H.es.attributes():
-            print("----H graph does not have weight, ERROR")
-            print("\t\t there are {}".format(len(terminal_vertices)))
+            error("----H graph does not have weight, ERROR")
+            error("\t\t There are %s", len(terminal_vertices))
         mst_edge_idxs = H.spanning_tree(weights='weight', return_tree=False)
 
         # Now, we join the paths for all the mst_edge_idxs
@@ -763,7 +773,7 @@ class PlanarGraph(igraph.Graph):
         self.es['is_through_line'] = False
 
         if top_k is not None:
-            info("Selecting the top-{} ratios".format(top_k))
+            info("Selecting the top-%s ratios", top_k)
             ratios = orig_metric_closure.es['ratio'][:]
             ranking = np.argsort(ratios)[::-1][:int(top_k)]
             for idx in ranking:
@@ -774,7 +784,7 @@ class PlanarGraph(igraph.Graph):
                 post_process_lines.append(path_linestring)
 
         elif ratio_cutoff is not None:
-            info("Adding thru lines, ratios are: {}".format(orig_metric_closure.es['ratio']))
+            info("Adding thru lines, ratios are: %s", orig_metric_closure.es['ratio'])
             for e in orig_metric_closure.es.select(ratio_gt = ratio_cutoff):
                 edge_path = self.es[e['path']]
                 edge_path['is_through_line'] = True 
@@ -1002,7 +1012,7 @@ class PlanarGraph(igraph.Graph):
         piece_list = []
         all_visited_idxs = set()
 
-        print("Breaking to pieces...")
+        info("Breaking to pieces...")
         for v in tqdm.tqdm(self.vs):
             if v.index not in all_visited_idxs:
                 neighbors = v.neighbors()
@@ -1058,7 +1068,6 @@ class PlanarGraph(igraph.Graph):
         all_visited = set()
 
         debug("Simplifying edge width...")
-        #for v in tqdm.tqdm(self.vs):
         for v in self.vs:
             neighbors = v.neighbors()
             num_neighbors = len(neighbors)
@@ -1066,16 +1075,16 @@ class PlanarGraph(igraph.Graph):
                 # get the edge sequence
                 cont_vs = self._search_continuous_edge(v)
                 
-                debug("\nVertex: {}".format(v['name']))
+                debug("\nVertex: %s", v['name'])
                 debug([self.vs[i]['name'] for i in cont_vs])
                 
                 edges = self.es.select(_within=cont_vs)
-                debug("Found {} edges".format(len(edges)))
+                debug("Found %s edges", len(edges))
 
                 min_width = min([e['width'] for e in edges])
                 if min_width is None:
-                    debug("Vertex {} has {} neighbors".format(v.index, num_neighbors))
-                    debug("\tsegment is {}".format(cont_vs))
+                    debug("Vertex %s has %s neighbors", v.index, num_neighbors)
+                    debug("\tSegment is %s", cont_vs)
                 for e in edges:
                     e['width'] = min_width
 

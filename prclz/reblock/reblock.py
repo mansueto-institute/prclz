@@ -1,13 +1,9 @@
-import argparse
-import os
-import time
 from pathlib import Path
 from typing import List, Tuple, Callable
 import geopandas as gpd
 import igraph
 import numpy as np
 import pandas as pd
-import tqdm
 from shapely.ops import polygonize
 from shapely.wkt import dumps
 from shapely.geometry import (LinearRing, LineString, MultiLineString,
@@ -21,45 +17,6 @@ def block_to_gadm(block: str) -> str:
     block_rev = block[::-1]
     idx = block_rev.index("_") + 1
     return block[0:-idx]
-
-def add_buildings(graph: PlanarGraph, 
-                  bldg_centroids: List[Point],
-                  ) -> PlanarGraph:
-    """Add bldg centroids to planar graph"""
-
-    total_blgds = len(bldg_centroids)
-    for i, bldg_node in enumerate(bldg_centroids):
-        graph.add_node_to_closest_edge(bldg_node, terminal=True)
-
-    if total_blgds > 0:
-        graph._cleanup_linestring_attr()
-    return graph 
-
-def clean_graph(graph: PlanarGraph) -> PlanarGraph:
-    """
-    Some graphs are malformed bc of bad geometries and 
-    we take the largest connected subgraph
-    """
-    is_conn = graph.is_connected()
-    if is_conn:
-        info("Graph is connected...")
-        return graph, 1
-    else:
-        info("Graph is NOT connected...")
-        components = graph.components(mode=igraph.WEAK)
-        num_components = len(components)
-        comp_sizes = [len(idxs) for idxs in components]
-        arg_max = np.argmax(comp_sizes)
-        comp_indices = components[arg_max]
-
-        debug("len comp_indices = {}".format(len(comp_indices)))
-        debug("num_components = {}".format(num_components))
-        debug("comp_sizes = {}".format(comp_sizes))
-    
-        sub = graph.subgraph(comp_indices)
-        debug("Thru...")
-
-        return graph.subgraph(comp_indices), num_components
 
 def drop_buildings_intersecting_block(parcel_geom: LineString,
                                       bldg_centroids: List[Point],
@@ -97,7 +54,7 @@ def drop_buildings_intersecting_block(parcel_geom: LineString,
 
     if has_building.sum() != building_geom_df.shape[0]:
         warning("Check drop_buildings_intersecting_block sjoin for block")
-        warning("buildings = {} but matched = {}".format(building_geom_df.shape[0], has_building.sum()))
+        warning("Buildings = %s but matched = %s", building_geom_df.shape[0], has_building.sum())
     m_has_building = m.loc[has_building]
     m_has_building = m_has_building.rename(columns={'geometry':'parcel_geom'})
     m_has_building = m_has_building.merge(building_geom_df, how='left', on='building_id')
@@ -158,7 +115,7 @@ def reblock(parcels: MultiLineString,
     graph = PlanarGraph.from_multilinestring(parcels)
 
     # [5] Add bldg centroids to PlanarGraph as terminal nodes
-    add_buildings(graph, bldg_centroids)
+    graph.add_buildings(bldg_centroids)
 
     # [6] Update the edge types to denote existing streets, per block geometry
     graph.update_edge_types(block, check=True)
@@ -169,7 +126,7 @@ def reblock(parcels: MultiLineString,
         graph.calc_edge_weight()
 
     # [8] Clean graph if it's disconnected
-    graph, num_components = clean_graph(graph)
+    num_components = graph.clean_graph()
 
     # [9 Optional] Simplify the vertex structure
     if simplify:
