@@ -1,0 +1,181 @@
+country,region,gadm_name,geofabrik_name,geofabrik_region
+Afghanistan,Asia & Pacific,AFG,afghanistan,asia
+Algeria,Arab States,DZA,algeria,africa
+American Samoa,Asia & Pacific,ASM,american-samoa,asia
+Angola,Africa,AGO,angola,africa
+Anguilla,South/Latin America,AIA,anguilla,south-america
+Antigua and Barbuda,South/Latin America,ATG,antigua-and-barbuda,south-america
+Argentina,South/Latin America,ARG,argentina,south-america
+Armenia,Europe,ARM,armenia,asia
+Aruba,South/Latin America,ABW,aruba,south-america
+Azerbaijan,Asia & Pacific,AZE,azerbaijan,asia
+Bahamas,South/Latin America,BHS,bahamas,south-america
+Bahrain,Arab States,BHR,gcc-states,asia
+Bangladesh,Asia & Pacific,BGD,bangladesh,asia
+Barbados,South/Latin America,BRB,barbados,south-america
+Belarus,Europe,BLR,belarus,europe
+Belize,South/Latin America,BLZ,belize,central-america
+Benin,Africa,BEN,benin,africa
+Bhutan,Asia & Pacific,BTN,bhutan,asia
+Bolivia,South/Latin America,BOL,bolivia,south-america
+Botswana,Africa,BWA,botswana,africa
+Bouvet Island,South/Latin America,BVT,bouvet-island,south-america
+Brazil,South/Latin America,BRA,brazil,south-america
+British Indian Ocean Territory,Asia & Pacific,IOT,british-indian-ocean-territory,asia
+Brunei Darussalam,Asia & Pacific,BRN,malaysia-singapore-brunei,asia
+Burkina Faso,Africa,BFA,burkina-faso,africa
+Burundi,Africa,BDI,burundi,africa
+Cambodia,Asia & Pacific,KHM,cambodia,asia
+Cameroon,Africa,CMR,cameroon,africa
+Cape Verde,Africa,CPV,cape-verde,africa
+Cayman Islands,South/Latin America,CYM,cayman-islands,south-america
+Central African Republic,Africa,CAF,central-african-republic,africa
+Chad,Africa,TCD,chad,africa
+Chile,South/Latin America,CHL,chile,south-america
+China,Asia & Pacific,CHN,china,asia
+Christmas Island,Asia & Pacific,CXR,christmas-island,asia
+Cocos (Keeling) Islands,Asia & Pacific,CCK,cocos-(keeling)-islands,asia
+Colombia,South/Latin America,COL,colombia,south-america
+Comoros,Arab States,COM,comores,africa
+Congo,Africa,COG,congo-brazzaville,africa
+"Congo, The Democratic Republic of the",Africa,COD,congo-democratic-republic,africa
+Cook Islands,Asia & Pacific,COK,cook-islands,asia
+Costa Rica,South/Latin America,CRI,costa-rica,central-america
+Côte D'Ivoire,Africa,CIV,ivory-coast,africa
+Cuba,South/Latin America,CUB,cuba,central-america
+Djibouti,Arab States,DJI,djibouti,africa
+Dominica,South/Latin America,DMA,dominica,south-america
+Dominican Republic,South/Latin America,DOM,haiti-and-domrep,central-america
+Ecuador,South/Latin America,ECU,ecuador,south-america
+Egypt,Arab States,EGY,egypt,africa
+El Salvador,South/Latin America,SLV,el-salvador,south-america
+Equatorial Guinea,Africa,GNQ,equatorial-guinea,africa
+Eritrea,Africa,ERI,eritrea,africa
+Ethiopia,Africa,ETH,ethiopia,africa
+Falkland Islands (Malvinas),South/Latin America,FLK,falkland-islands-(malvinas),south-america
+Fiji,Asia & Pacific,FJI,fiji,australia-oceania
+French Guiana,South/Latin America,GUF,french-guiana,south-america
+French Polynesia,Asia & Pacific,PYF,french-polynesia,asia
+French Southern Territories,Asia & Pacific,ATF,french-southern-territories,asia
+Gabon,Africa,GAB,gabon,africa
+Gambia,Africa,GMB,senegal-and-gambia,africa
+Georgia,Europe,GEO,georgia,europe
+Ghana,Africa,GHA,ghana,africa
+Grenada,South/Latin America,GRD,grenada,south-america
+Guadeloupe,South/Latin America,GLP,guadeloupe,south-america
+Guam,Asia & Pacific,GUM,guam,asia
+Guatemala,South/Latin America,GTM,guatemala,central-america
+Guinea,Africa,GIN,guinea,africa
+Guinea-Bissau,Africa,GNB,guinea-bissau,africa
+Guyana,South/Latin America,GUY,guyana,south-america
+Haiti,South/Latin America,HTI,haiti-and-domrep,central-america
+Heard Island and McDonald Islands,Asia & Pacific,HMD,heard-island-and-mcdonald-islands,asia
+Honduras,South/Latin America,HND,honduras,south-america
+India,Asia & Pacific,IND,india,asia
+Indonesia,Asia & Pacific,IDN,indonesia,asia
+"Iran, Islamic Republic of",Asia & Pacific,IRN,iran,asia
+Iraq,Arab States,IRQ,iraq,asia
+Jamaica,South/Latin America,JAM,jamaica,central-america
+Jordan,Arab States,JOR,jordan,asia
+Kazakhstan,Asia & Pacific,KAZ,kazakhstan,asia
+Kenya,Africa,KEN,kenya,africa
+Kiribati,Asia & Pacific,KIR,kiribati,asia
+"Korea, Democratic People's Republic of",Asia & Pacific,PRK,south-korea,asia
+Kuwait,Arab States,KWT,gcc-states,asia
+Kyrgyzstan,Asia & Pacific,KGZ,kyrgyzstan,asia
+Lao People's Democratic Republic,Asia & Pacific,LAO,laos,asia
+Lebanon,Arab States,LBN,lebanon,asia
+Lesotho,Africa,LSO,lesotho,africa
+Liberia,Africa,LBR,liberia,africa
+Libya,Arab States,LBY,libya,africa
+Madagascar,Africa,MDG,madagascar,africa
+Malawi,Africa,MWI,malawi,africa
+Malaysia,Asia & Pacific,MYS,malaysia-singapore-brunei,asia
+Maldives,Asia & Pacific,MDV,maldives,asia
+Mali,Africa,MLI,mali,africa
+Marshall Islands,Asia & Pacific,MHL,marshall-islands,asia
+Martinique,South/Latin America,MTQ,martinique,south-america
+Mauritania,Arab States,MRT,mauritania,africa
+Mauritius,Africa,MUS,mauritius,africa
+Mayotte,Africa,MYT,mayotte,africa
+Mexico,South/Latin America,MEX,mexico,north-america
+"Micronesia, Federated States of",Asia & Pacific,FSM,micronesia-federated-states-of,asia
+Mongolia,Asia & Pacific,MNG,mongolia,asia
+Montserrat,South/Latin America,MSR,montserrat,south-america
+Morocco,Arab States,MAR,morocco,africa
+Mozambique,Africa,MOZ,mozambique,africa
+Myanmar,Asia & Pacific,MMR,myanmar,asia
+Namibia,Africa,NAM,namibia,africa
+Nauru,Asia & Pacific,NRU,nauru,asia
+Nepal,Asia & Pacific,NPL,nepal,asia
+Netherlands Antilles,South/Latin America,,netherlands-antilles,south-america
+New Caledonia,Asia & Pacific,NCL,new-caledonia,australia-oceania
+Nicaragua,South/Latin America,NIC,nicaragua,central-america
+Niger,Africa,NER,niger,africa
+Nigeria,Africa,NGA,nigeria,africa
+Niue,Asia & Pacific,NIU,niue,asia
+Norfolk Island,Asia & Pacific,NFK,norfolk-island,asia
+Northern Mariana Islands,Asia & Pacific,MNP,northern-mariana-islands,asia
+Oman,Arab States,OMN,gcc-states,asia
+Pakistan,Asia & Pacific,PAK,pakistan,asia
+Palau,Asia & Pacific,PLW,palau,asia
+Palestinian Territory,Arab States,PSE,israel-and-palestine,asia
+Panama,South/Latin America,PAN,panama,south-america
+Papua New Guinea,Asia & Pacific,PNG,papua-new-guinea,australia-oceania
+Paraguay,South/Latin America,PRY,paraguay,south-america
+Peru,South/Latin America,PER,peru,south-america
+Philippines,Asia & Pacific,PHL,philippines,asia
+Pitcairn Islands,Asia & Pacific,PCN,pitcairn-islands,asia
+Puerto Rico,South/Latin America,PRI,puerto-rico,North-america/us
+Qatar,Arab States,QAT,gcc-states,asia
+Reunion,Asia & Pacific,REU,reunion,asia
+Rwanda,Africa,RWA,rwanda,africa
+Saint Barthelemy,South/Latin America,BLM,saint-barthelemy,south-america
+Saint Helena,Africa,SHN,saint-helena-ascension-and-tristan-da-cunha,africa
+Saint Kitts and Nevis,South/Latin America,KNA,saint-kitts-and-nevis,south-america
+Saint Lucia,South/Latin America,LCA,saint-lucia,south-america
+Saint Martin,South/Latin America,MAF,saint-martin,south-america
+Saint Vincent and the Grenadines,South/Latin America,VCT,saint-vincent-and-the-grenadines,south-america
+Samoa,Asia & Pacific,WSM,samoa,asia
+Sao Tome and Principe,Africa,STP,sao-tome-and-principe,africa
+Saudi Arabia,Arab States,SAU,gcc-states,asia
+Senegal,Africa,SEN,senegal-and-gambia,africa
+Seychelles,Africa,SYC,seychelles,africa
+Sierra Leone,Africa,SLE,sierra-leone,africa
+Solomon Islands,Asia & Pacific,SLB,solomon-islands,asia
+Somalia,Arab States,SOM,somalia,africa
+South Africa,Africa,ZAF,south-africa,africa
+South Georgia and the South Sandwich Islands,South/Latin America,SGS,south-georgia-and-the-south-sandwich-islands,south-america
+South Sudan,Africa,SSD,south-sudan,africa
+Sri Lanka,Asia & Pacific,LKA,sri-lanka,asia
+Sudan,Arab States,SDN,sudan,africa
+Suriname,South/Latin America,SUR,suriname,south-america
+Swaziland,Africa,SWZ,swaziland,africa
+Syrian Arab Republic,Asia & Pacific,SYR,syria,asia
+Tajikistan,Asia & Pacific,TJK,tajikistan,asia
+"Tanzania, United Republic of",Africa,TZA,tanzania,africa
+Thailand,Asia & Pacific,THA,thailand,asia
+Timor-Leste,Asia & Pacific,,timor-leste,asia
+Togo,Africa,TGO,togo,africa
+Tokelau,Asia & Pacific,TKL,tokelau,asia
+Tonga,Asia & Pacific,TON,tonga,asia
+Trinidad and Tobago,South/Latin America,TTO,trinidad-and-tobago,south-america
+Tunisia,Arab States,TUN,tunisia,africa
+Turkmenistan,Asia & Pacific,TKM,turkmenistan,asia
+Turks and Caicos Islands,South/Latin America,TCA,turks-and-caicos-islands,south-america
+Tuvalu,Asia & Pacific,TUV,tuvalu,asia
+Uganda,Africa,UGA,uganda,africa
+Ukraine,Europe,UKR,ukraine,europe
+United Arab Emirates,Arab States,ARE,gcc-states,asia
+United States Minor Outlying Islands,Asia & Pacific,UMI,united-states-minor-outlying-islands,asia
+Uruguay,South/Latin America,URY,uruguay,south-america
+Uzbekistan,Asia & Pacific,UZB,uzbekistan,asia
+Vanuatu,Asia & Pacific,VUT,vanuatu,asia
+Venezuela,South/Latin America,VEN,venezuela,south-america
+Vietnam,Asia & Pacific,VNM,vietnam,asia
+"Virgin Islands, British",South/Latin America,,virgin-islands-british,south-america
+"Virgin Islands, U.S.",South/Latin America,VIR,virgin-islands-u.s.,south-america
+Wallis and Futuna,Asia & Pacific,WLF,wallis-and-futuna,asia
+Yemen,Arab States,YEM,yemen,asia
+Zambia,Africa,ZMB,zambia,africa
+Zimbabwe,Africa,ZWE,zimbabwe,africa
