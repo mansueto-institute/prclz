@@ -2,7 +2,9 @@ from logging import basicConfig, info, debug
 
 import click
 
-from etl import download
+from .etl import download
+from .blocks import extract
+from . import complexity
 
 @click.group()
 @click.option("--logging", 
@@ -33,9 +35,14 @@ def split_geojson():
     pass 
 
 @prclz.command()
-def blocks():
+@click.argument("gadm_path",        type = click.Path(exists = True))
+@click.argument("linestrings_path", type = click.Path(exists = True))
+@click.argument("output_dir",       type = click.Path(exists = True))
+@click.option("--gadm_level", help = "GADM aggregation level",   default = 5)
+@click.option("--overwrite",  help = "overwrite existing files", default = False, is_flag = True)
+def blocks(gadm_path, linestrings_path, output_dir, gadm_level, overwrite):
     """ Extract block geometry. """
-    pass 
+    extract.main(gadm_path, linestrings_path, output_dir, gadm_level, overwrite)
 
 @prclz.command()
 def parcels():
@@ -43,9 +50,13 @@ def parcels():
     pass 
 
 @prclz.command()
-def complexity():
+@click.argument("blocks_path",    type = click.Path(exists = True))
+@click.argument("buildings_path", type = click.Path(exists = True))
+@click.argument("output_dir",     type = click.Path(exists = True))
+@click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
+def complexity(blocks_path, buildings_path, output_dir, overwrite):
     """ Calculate the k-index (complexity) of a block. """
-    pass 
+    complexity.main(blocks_path, buildings_path, output_dir, overwrite)
 
 @prclz.command()
 def reblock():

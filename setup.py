@@ -21,6 +21,6 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     entry_points = { 
-        'console_scripts': ['prclz = cli:cli']
+        'console_scripts': ['prclz=prclz.cli:prclz']
     }
 )
