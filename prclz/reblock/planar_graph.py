@@ -700,8 +700,7 @@ class PlanarGraph(igraph.Graph):
 
         # Now get the MST of that complete graph of only terminal_vertices
         if "weight" not in H.es.attributes():
-            error("----H graph does not have weight, ERROR")
-            error("\t\t There are %s", len(terminal_vertices))
+            error("----H graph does not have weight, ERROR There are %s", len(terminal_vertices))
         mst_edge_idxs = H.spanning_tree(weights='weight', return_tree=False)
 
         # Now, we join the paths for all the mst_edge_idxs
