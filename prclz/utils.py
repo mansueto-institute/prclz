@@ -1,6 +1,7 @@
 import os
+from pathlib import Path
 from logging import info, warning
-from typing import Tuple
+from typing import Tuple, Union
 
 import geopandas as gpd
 import pandas as pd
@@ -23,6 +24,25 @@ def get_gadm_level_column(gadm: gpd.GeoDataFrame, level: int = 5) -> str:
         gadm_level_column = "GID_{}".format(level)
     info("Using GID column for GADM level %s", level)
     return gadm_level_column, level
+
+def gadm_dir_to_path(gadm_dir: Union[str, Path]) -> str:
+    """
+    For a given country,the GADM dir contains multiple file levels
+    so this convenience function just returns the path to the highest
+    resolution gadm file within the directory, which changes from 
+    country to country
+
+    Args:
+        gadm_dir: directory containing all gadm files for a country
+    
+    Returns:
+        Path to specific gadm file
+    """
+    sort_fn = lambda p: int(p.stem.split("_")[-1])
+    gadm_dir = Path(gadm_dir)
+    files = [p for p in gadm_dir.iterdir() if ".shp" in p.name]
+    files.sort(key=sort_fn)
+    return files[-1]
 
 def csv_to_geo(csv_path, add_file_col=False):
     '''
