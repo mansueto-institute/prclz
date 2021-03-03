@@ -2,7 +2,7 @@ from logging import basicConfig, info, debug
 
 import click
 
-from .etl import download
+from .etl import download, split_bldgs
 from .blocks import extract
 from . import complexity
 
@@ -36,6 +36,15 @@ def download(datasource, directory, countries, overwrite):
 def split_geojson():
     """ Split OSM data by GADM delineation. """
     pass 
+
+@prclz.command()
+@click.argument("--bldg_file", type=str, required=True, help="Path to master geojson file containing all building polygons")
+@click.argument("--gadm_path", type=str, required=True, help="Path to GADM file")
+@click.argument("--output_dir", type=str, required=True, help="Output directory for gadm-specific building files")
+def split_geojson_bldgs(bldg_file, gadm_path, output_dir):
+    """ Split OSM buildings by GADM delineation. """
+    split_bldgs.main(bldg_file, gadm_path, output_dir)
+
 
 @prclz.command()
 @click.argument("gadm_path",        type = click.Path(exists = True))
