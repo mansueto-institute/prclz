@@ -1,6 +1,7 @@
 import os
+from pathlib import Path
 from logging import info, warning
-from typing import Tuple
+from typing import Tuple, Union
 
 import geopandas as gpd
 import pandas as pd

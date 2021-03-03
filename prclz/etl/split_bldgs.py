@@ -6,26 +6,6 @@ from ..utils import gadm_dir_to_path
 import geopandas as gpd
 import pandas as pd
 
-def gadm_dir_to_path(gadm_dir: Union[str, Path]) -> str:
-    """
-    For a given country,the GADM dir contains multiple file levels
-    so this convenience function just returns the path to the highest
-    resolution gadm file within the directory, which changes from 
-    country to country
-
-    Args:
-        gadm_dir: directory containing all gadm files for a country
-    
-    Returns:
-        Path to specific gadm file
-    """
-    sort_fn = lambda p: int(p.stem.split("_")[-1])
-    gadm_dir = Path(gadm_dir)
-    files = [p for p in gadm_dir.iterdir() if ".shp" in p.name]
-    files.sort(key=sort_fn)
-    return files[-1]
-
-
 def clean_gadm_cols(gadms: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     The GADM files have columns GID_0, GID_1, ... , GID_n depending
