@@ -17,7 +17,7 @@ from shapely.geometry import (LineString, MultiLineString, MultiPolygon, Point,
 from shapely.ops import cascaded_union
 from shapely.wkt import loads
 
-from ..etl.commons import build_data_dir
+from ..etl.download import build_data_dir
 from .planar_graph import PlanarGraph
 
 def to_gdf(shape):

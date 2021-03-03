@@ -1,12 +1,12 @@
-import argparse
 from typing import List, Union
 from logging import basicConfig, info
 from pathlib import Path 
+from ..utils import gadm_dir_to_path
 
 import geopandas as gpd
 import pandas as pd
 
-def gadm_dir_to_path(gadm_dir: str) -> str:
+def gadm_dir_to_path(gadm_dir: Union[str, Path]) -> str:
     """
     For a given country,the GADM dir contains multiple file levels
     so this convenience function just returns the path to the highest
@@ -38,7 +38,7 @@ def clean_gadm_cols(gadms: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     cc = cols[0]
     gadm = cols[-1]
-    std_gadms = gadms[[cc, gadm, 'geometry']].copy()
+    std_gadms = gadms[[cc, gadm, 'geometry']]
     std_gadms.rename(columns={cc: 'gadm_code', gadm: 'gadm'}, inplace=True)
     return std_gadms
 
@@ -79,11 +79,11 @@ def main(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for cur_gadm, data in bldgs.groupby('gadm'):
-        f = "buildings_{}.geojson".format(cur_gadm)
+    for gadm, data in bldgs.groupby('gadm'):
+        f = "buildings_{}.geojson".format(gadm)
         out_path = output_dir / f
 
-        data.to_file(str(out_path), driver='GeoJSON')
+        data.to_file(out_path, driver='GeoJSON')
         info("Creating file: %s", str(out_path))
 
     return bldgs, gadms
