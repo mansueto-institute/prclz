@@ -45,8 +45,8 @@ def tessellate(
 
     return tess_gdf, bldgs_gdf 
 
-def get_orphaned_polys(tess_gdf: gpd.GeoDataFrame,
-                       bldgs_gdf: gpd.GeoDataFrame,
+def get_orphaned_polys(tessellations: gpd.GeoDataFrame,
+                       bldgs: gpd.GeoDataFrame,
                        ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """
     The Morphological Tess from Momepy probably has orphaned parcels
@@ -54,25 +54,26 @@ def get_orphaned_polys(tess_gdf: gpd.GeoDataFrame,
     into those w/ a building and those w/o a building (i.e. orphaned)
 
     Args:
-        tess_gdf: output dataframe from momepy.Tessellation
-        bldgs_gdf: dataframe of building polygons
+        tessellations: output dataframe from momepy.Tessellation
+        bldgs: dataframe of building polygons
 
     Returns:
         Two dataframes of parcels w/o and w/ buildings, respectively
         Geometry type for each parcel is polygon (never multipolygon)
     """
     # Get the multi polys
-    t = tess_gdf.copy()
+    t = tessellations.copy()
     t['is_mp'] = t.type.isin(["MultiPolygon"])
-    t_mp = t[t['is_mp']]
-    t_mp = t_mp.explode()
+    tess_multips = t[t['is_mp']]
+    tess_multips = tess_multips.explode()
 
     # Sjoin against buildings
-    t_mp = gpd.sjoin(t_mp, bldgs_gdf, how='left', op='intersects')
+    tess_multips = gpd.sjoin(tess_multips, bldgs, how='left', op='intersects')
 
     # Keep only those w/o building
-    no_bldg = t_mp[t_mp['index_right'].isna()]
-    has_bldg = t_mp[t_mp['index_right'].notnull()]
+    orphan_idx = tess_multips['index_right'].isna()
+    no_bldg = tess_multips[~has_b]
+    has_bldg = tess_multips[has_b]
 
     # Add back the earlier polygons for completeness
     no_bldg = no_bldg[['geometry']]
@@ -84,48 +85,49 @@ def get_orphaned_polys(tess_gdf: gpd.GeoDataFrame,
 
     return no_bldg, has_bldg
 
-def find_parent_parcel(parcel: Polygon,
-                       parents_df: gpd.GeoDataFrame,
-                       bldgs_df: gpd.GeoDataFrame,
+def find_parent_parcel_id(parcel: Polygon,
+                       parents: gpd.GeoDataFrame,
+                       bldgs: gpd.GeoDataFrame,
                        ) -> Tuple[int, Polygon]:
     """
     Given a single parcel and dataframes of candidate parent parcels
-    and buildings, finds the parcel from parents_df that:
+    and buildings, finds the parcel from parents that:
         1. Neighbors the target parcel geometry
         2. Minimizes dist btwn the parcel building and target parcel centroid
     NOTE: each dataframe should have 'uID' id column
 
     Args:
         parcel: target parcel geometry
-        parents_df: parent geometries to match target parcel to
-        bldgs_df: buildings dataframe used to get dist to target parcel
+        parents: parent geometries to match target parcel to
+        bldgs: buildings dataframe used to get dist to target parcel
 
     Returns:
-        The geometry from parents_df AND the index from 'uID'
+        The geometry from parents AND the index from 'uID'
     """
-    assert 'uID' in parents_df.columns, "ERROR -- in find_parent_parcel parents_df should include 'uID'"
-    assert 'uID' in bldgs_df.columns, "ERROR -- in find_parent_parcel bldgs_df should include 'uID'"
+    assert 'uID' in parents.columns, "ERROR -- in find_parent_parcel parents should include 'uID'"
+    assert 'uID' in bldgs.columns, "ERROR -- in find_parent_parcel bldgs should include 'uID'"
     
     # Sort buildings by distance to parcel centroid
     centroid = parcel.centroid
-    bldgs_df = bldgs_df.copy()
-    bldgs_df['dist'] = bldgs_df.distance(centroid)
-    bldgs_df.sort_values(by='dist', ascending=True, inplace=True)
+    bldgs = bldgs.copy()
+    bldgs['dist'] = bldgs.distance(centroid)
+    bldgs.sort_values(by='dist', ascending=True, inplace=True)
 
     # Starting w/ nearest, loop until we find a bldg
     # where the line from parent_candidate_centroid -> centroid 
     # is entirely within the block
     found_match = False
-    for bid in bldgs_df['uID'].values:
-        parent = parents_df[parents_df['uID']==bid].iloc[0]['geometry']
+    for bid in bldgs['uID'].values:
+        parent = parents[parents['uID']==bid].iloc[0]['geometry']
         nearest_pt = nearest_points(parent, parcel)
         if nearest_pt[0] == nearest_pt[1]: # implies parcels border each other
             found_match = True
             break
     if not found_match:
-        warning("Could not match orphaned parcel to neighboring parcel")
+        bid, parent = None, None
+        warning("Could not match orphaned parcel with centroid %sto neighboring parcel", centroid)
 
-    return bid, parent
+    return bid
 
 def reunion(no_bldg: gpd.GeoDataFrame,
             has_bldg: gpd.GeoDataFrame,
@@ -136,14 +138,14 @@ def reunion(no_bldg: gpd.GeoDataFrame,
     parcel in has_bldg, using the uID field to map buildings
     to parcels.
     """
-    reun = no_bldg.copy()
+    reunioned = no_bldg.copy()
     orphan_uID = []
-    for orphan in reun['geometry']:
-        bid, _ = find_parent_parcel(orphan, has_bldg, bldgs_df)
+    for orphan in reunioned['geometry']:
+        bid = find_parent_parcel_id(orphan, has_bldg, bldgs_df)
         orphan_uID.append(bid)
-    reun['uID'] = orphan_uID
-    reun = pd.concat([reun, has_bldg])
-    reun = reun.dissolve(by='uID')
-    reun.reset_index(inplace=True)
+    reunioned['uID'] = orphan_uID
+    reunioned = pd.concat([reunioned, has_bldg])
+    reunioned = reunioned.dissolve(by='uID')
+    reunioned.reset_index(inplace=True)
 
-    return reun
+    return reunioned
