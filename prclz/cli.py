@@ -62,7 +62,7 @@ def blocks(gadm_path, linestrings_path, output_dir, gadm_level, overwrite):
 @click.argument("buildings_path", type = click.Path(exists = True))
 @click.argument("output_dir",     type = click.Path(exists = True))
 @click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
-def parcels():
+def parcels(blocks_path, buildings_path, output_dir, overwrite):
     """ Split block into cadastral parcels. """
     parcels.main(blocks_path, buildings_path, output_dir, overwrite)
 

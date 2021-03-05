@@ -235,8 +235,33 @@ class PlanarGraph(igraph.Graph):
         return graph
 
     @classmethod
+    def from_shapely(cls: Type,
+                     geom: Union[MultiPolygon, MultiLineString],
+                     ) -> PlanarGraph:
+        """
+        Convenience method for calling the appropriate constructor
+        based on the geomtype of geom
+        """
+        if isinstance(geom, MultiPolygon):
+            graph = cls.from_multipolygon(geom)
+        elif isinstance(geom, MultiLineString):
+            graph = cls.from_multilinestring(geom)
+        else:
+            if isinstance(geom, gpd.GeoSeries):
+                geom0 = geom.iloc[0]
+            else:
+                geom0 = geom[0]
+            if isinstance(geom0, Polygon):
+                graph = cls.from_multipolygon(geom)
+            elif isinstance(geom0, LineString):
+                graph = cls.from_multilinestring(geom)
+            else:
+                raise RuntimeError("Attempted creation of internal graph class with geom type {}".format(type(geom)))
+        return graph 
+
+    @classmethod
     def from_multipolygon(cls: Type, 
-                          multipolygon: MultiPolygon,
+                          multipolygon: Union[MultiPolygon, Sequence[Polygon]],
                           ) -> PlanarGraph:
         """
         Factory method for creating a graph representation of 
@@ -261,7 +286,7 @@ class PlanarGraph(igraph.Graph):
 
     @classmethod
     def from_multilinestring(cls: Type, 
-                             multilinestring: MultiLineString,
+                             multilinestring: Union[MultiLineString, Sequence[LineString]],
                              ) -> PlanarGraph:
         """
         Factory method for creating a graph representation of 

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Union
 import geopandas as gpd
 import igraph
 import numpy as np
@@ -11,6 +11,7 @@ from shapely.geometry import (LinearRing, LineString, MultiLineString,
 from logging import basicConfig, debug, info, warning, error
 
 from .planar_graph import PlanarGraph
+from ..utils import csv_to_geo
 
 def block_to_gadm(block: str) -> str:
     """Just grabs the GADM from a block"""
@@ -92,11 +93,11 @@ def add_outside_node(block_geom: Polygon,
     
     return bldg_centroids 
 
-def reblock(parcels: MultiLineString,
+def reblock(parcels: Union[MultiLineString, MultiPolygon],
             buildings: MultiPolygon,
             block: Polygon,
             use_width: bool=False,
-            simplify: bool=False,
+            simplify_roads: bool=False,
             ) -> Tuple[PlanarGraph, MultiLineString, MultiLineString]:
     # [1] Bldg poly -> bldg centroids
     bldg_centroids = [b.centroid for b in buildings]
@@ -112,7 +113,9 @@ def reblock(parcels: MultiLineString,
     bldg_centroids = add_outside_node(block, bldg_centroids)
 
     # [4] Convert parcel -> PlanarGraph
-    graph = PlanarGraph.from_multilinestring(parcels)
+    #graph = PlanarGraph.from_multilinestring(parcels)
+    graph = PlanarGraph.from_shapely(parcels)
+    graph.es['edge_type'] = None
 
     # [5] Add bldg centroids to PlanarGraph as terminal nodes
     graph.add_buildings(bldg_centroids)
@@ -129,14 +132,14 @@ def reblock(parcels: MultiLineString,
     num_components = graph.clean_graph()
 
     # [9 Optional] Simplify the vertex structure
-    if simplify:
+    if simplify_roads:
         graph.simplify()
 
     # [10] Steiner Approximation
     graph.steiner_tree_approx()
 
     # [11] Extract optimal paths from graph and return
-    new_path, existing_path = graph.get_steiner_linestrings(expand=simplify)
+    new_path, existing_path = graph.get_steiner_linestrings(expand=simplify_roads)
 
     return graph, new_path, existing_path
 
@@ -159,4 +162,26 @@ def simplify_streets(
     simplified_linestrings = graph.simplify_reblocked_graph()
     return simplified_linestrings
 
+def main(buildings_path: Union[Path, str], 
+         parcels_path: Union[Path, str], 
+         blocks_path: Union[Path, str], 
+         use_width: bool = False, 
+         simplify_roads: bool = False
+         ) -> None:
+    """
+    Reblock
+    """
+    bldgs_gdf = gpd.read_file(buildings_path)
+    parcels_gdf = gpd.read_file(parcels_path)
+    blocks_gdf = csv_to_geo(blocks_path).rename(columns={'block_geom': 'geometry'})
 
+    bldgs_gdf = gpd.sjoin(bldgs_gdf, blocks_gdf, how='left', op='intersects').drop(columns=['index_right'])
+
+    for block_id in blocks_gdf['block_id']:
+        parcels = parcels_gdf[parcels_gdf['block_id']==block_id]['geometry']
+        block = blocks_gdf[blocks_gdf['block_id']==block_id]['geometry'].iloc[0]
+        bldgs = bldgs_gdf[bldgs_gdf['block_id']==block_id]['geometry']
+        if bldgs.shape[0] > 0:
+            bldgs = bldgs.values
+            _, new, existing = reblock.reblock(parcels, bldgs, block)
+            break 

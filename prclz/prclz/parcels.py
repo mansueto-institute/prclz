@@ -8,7 +8,9 @@ import numpy as np
 from typing import List, Tuple, Union, Sequence
 from pathlib import Path
 from logging import warning, info
-from ..utils import csv_to_geo
+#from ..utils import csv_to_geo
+import argparse
+from prclz.utils import csv_to_geo
 
 def make_parcels(bldgs: Union[Sequence[Polygon], MultiPolygon],
                  block: Polygon,
@@ -176,6 +178,10 @@ def main(
     Given a block geojson file and a buildings geojson file, and an
     output directory, creates the corresponding parcels file 
     """
+    blocks_path = Path(blocks_path)
+    buildings_path = Path(buildings_path)
+    output_dir = Path(output_dir)
+    
     gadm = blocks_path.stem.replace("blocks_","")
     output_path = output_dir / "parcels_{}.geojson".format(gadm)
     output_path.parent.mkdir(exist_ok=True, parents=True)
@@ -192,14 +198,19 @@ def main(
 
         # Parcelize each block_id -- this could be parellelized if
         # performance becomes a bottleneck
+        all_parcels = []
         for i, block_id in enumerate(blocks_gdf['block_id']):        
             bldgs = bldgs_gdf[bldgs_gdf['block_id']==block_id]['geometry']
             block = blocks_gdf[blocks_gdf['block_id']==block_id]['geometry'].iloc[0]
             
-            if i == 0:
-                parcels_gdf = make_parcels(bldgs, block)
-            else:
-                parcels_gdf = pd.concat([parcels_gdf, make_parcels(bldgs, block)])
+            parcels_gdf = make_parcels(bldgs, block)
+            parcels_gdf['block_id'] = block_id
+            all_parcels.append(parcels_gdf)
+            # if i == 0:
+            #     parcels_gdf = make_parcels(bldgs, block)
+            # else:
+            #     parcels_gdf = pd.concat([parcels_gdf, make_parcels(bldgs, block)])
+        parcels_gdf = pd.concat(all_parcels)
         parcels_gdf.drop(columns=['uID'], inplace=True)
         parcels_gdf.to_file(output_path, driver='GeoJSON')
         info("Save gadm %s parcels at %s", gadm, output_path)
@@ -255,3 +266,15 @@ def get_bad_geoms(
                           how='inner', op='intersects'
                           )
     return bad_parcels, bad_bldgs
+
+
+if __name__ == "__main__":
+
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("blocks_path", type = str)
+    parser.add_argument("buildings_path", type = str)
+    parser.add_argument("output_dir",     type = str)
+    parser.add_argument("--overwrite", help = "overwrite existing files", action='store_true')
+    args = parser.parse_args()
+    main(args.blocks_path, args.buildings_path, args.output_dir, args.overwrite)
