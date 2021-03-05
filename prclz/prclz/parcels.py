@@ -5,15 +5,18 @@ from shapely.geometry import (LinearRing, LineString, MultiLineString,
 from shapely.ops import nearest_points
 import momepy
 import numpy as np
-from typing import List, Tuple
-from logging import warning
+from typing import List, Tuple, Union, Sequence
+from pathlib import Path
+from logging import warning, info
+from ..utils import csv_to_geo
 
-def make_parcels(bldgs: MultiPolygon,
+def make_parcels(bldgs: Union[Sequence[Polygon], MultiPolygon],
                  block: Polygon,
                  ) -> gpd.GeoDataFrame:
     """
     Breaks block polygon in parcels based on bldgs. Merges orphaned
-    parcels resulting from convex Voronoi.
+    parcels resulting from convex Voronoi. If the bldg count == 0, 
+    then parcelization is trivial and we just return the block
 
     Args:
         bldgs: building polygons
@@ -22,14 +25,25 @@ def make_parcels(bldgs: MultiPolygon,
     Returns:
         Dataframe w/ polygons as parcels
     """
-    # Basic tesselation
-    tess_gdf, bldgs_gdf = tessellate(bldgs, block)
+    if len(bldgs) == 0:
+        parcels_gdf = gpd.GeoDataFrame({'geometry': [block]}, crs='EPSG:4326')
+    else:
+        # Change CRS
+        block = gpd.GeoSeries(block, crs='EPSG:4326').to_crs("EPSG:3395")[0]
+        bldgs = bldgs.to_crs("EPSG:3395")   
 
-    # Split resulting tess by those w/ or w/o a building
-    no_bldg_gdf, has_bldg_gdf = get_orphaned_polys(tess_gdf, bldgs_gdf)
+        # Basic tesselation
+        tess_gdf, bldgs_gdf = tessellate(bldgs, block)
 
-    # Reunion
-    parcels_gdf = reunion(no_bldg_gdf, has_bldg_gdf, bldgs_gdf)
+        # Split resulting tess by those w/ or w/o a building
+        no_bldg_gdf, has_bldg_gdf = get_orphaned_polys(tess_gdf, bldgs_gdf)
+
+        # Reunion
+        parcels_gdf = reunion(no_bldg_gdf, has_bldg_gdf, bldgs_gdf)
+        #parcels_gdf = tess_gdf
+
+        # Revert CRS back
+        parcels_gdf = parcels_gdf.to_crs("EPSG:4326")
 
     return parcels_gdf
 
@@ -41,6 +55,7 @@ def tessellate(
      
     bldgs_gdf = gpd.GeoDataFrame({'geometry':bldgs})
     bldgs_gdf['uID'] = np.arange(bldgs_gdf.shape[0])
+        
     tess_gdf = momepy.Tessellation(bldgs_gdf, unique_id='uID', limit=block).tessellation
 
     return tess_gdf, bldgs_gdf 
@@ -72,8 +87,8 @@ def get_orphaned_polys(tessellations: gpd.GeoDataFrame,
 
     # Keep only those w/o building
     orphan_idx = tess_multips['index_right'].isna()
-    no_bldg = tess_multips[~has_b]
-    has_bldg = tess_multips[has_b]
+    no_bldg = tess_multips[orphan_idx]
+    has_bldg = tess_multips[~orphan_idx]
 
     # Add back the earlier polygons for completeness
     no_bldg = no_bldg[['geometry']]
@@ -124,8 +139,10 @@ def find_parent_parcel_id(parcel: Polygon,
             found_match = True
             break
     if not found_match:
-        bid, parent = None, None
-        warning("Could not match orphaned parcel with centroid %sto neighboring parcel", centroid)
+        bid = None 
+        # NOTE: this does not imply failure, as many orphaned polys
+        # are in areas w/o any buildings at all
+        info("Could not match orphaned parcel with centroid %sto neighboring parcel", centroid)
 
     return bid
 
@@ -139,13 +156,102 @@ def reunion(no_bldg: gpd.GeoDataFrame,
     to parcels.
     """
     reunioned = no_bldg.copy()
-    orphan_uID = []
-    for orphan in reunioned['geometry']:
-        bid = find_parent_parcel_id(orphan, has_bldg, bldgs_df)
-        orphan_uID.append(bid)
-    reunioned['uID'] = orphan_uID
+    reunioned['uID'] = [find_parent_parcel_id(orphan, has_bldg, bldgs_df) 
+                        for orphan in reunioned['geometry']
+                        ]
     reunioned = pd.concat([reunioned, has_bldg])
     reunioned = reunioned.dissolve(by='uID')
     reunioned.reset_index(inplace=True)
 
     return reunioned
+
+
+def main(
+    blocks_path: Union[Path, str], 
+    buildings_path: Union[Path, str], 
+    output_dir: Union[Path, str], 
+    overwrite: bool = False,
+    ) -> None:
+    """
+    Given a block geojson file and a buildings geojson file, and an
+    output directory, creates the corresponding parcels file 
+    """
+    gadm = blocks_path.stem.replace("blocks_","")
+    output_path = output_dir / "parcels_{}.geojson".format(gadm)
+    output_path.parent.mkdir(exist_ok=True, parents=True)
+    if (not output_path.is_file() ) or overwrite:
+
+        blocks_gdf = csv_to_geo(blocks_path).rename(columns={'block_geom': 'geometry'})
+        blocks_gdf.crs = "EPSG:4326"
+        blocks_gdf.geometry.crs = "EPSG:4326"
+        start_crs = blocks_gdf.crs
+        bldgs_gdf = gpd.read_file(buildings_path)
+
+        # Map each bldg to block_id
+        bldgs_gdf = gpd.sjoin(bldgs_gdf, blocks_gdf, how='left', op='intersects')
+
+        # Parcelize each block_id -- this could be parellelized if
+        # performance becomes a bottleneck
+        for i, block_id in enumerate(blocks_gdf['block_id']):        
+            bldgs = bldgs_gdf[bldgs_gdf['block_id']==block_id]['geometry']
+            block = blocks_gdf[blocks_gdf['block_id']==block_id]['geometry'].iloc[0]
+            
+            if i == 0:
+                parcels_gdf = make_parcels(bldgs, block)
+            else:
+                parcels_gdf = pd.concat([parcels_gdf, make_parcels(bldgs, block)])
+        parcels_gdf.drop(columns=['uID'], inplace=True)
+        parcels_gdf.to_file(output_path, driver='GeoJSON')
+        info("Save gadm %s parcels at %s", gadm, output_path)
+    else:
+        info("Gadm %s parcels already exist at %s", gadm, output_path)
+
+
+def check_within(
+    parcels_gdf: gpd.GeoDataFrame,
+    bldgs_gdf: gpd.GeoDataFrame,
+    ) -> None:
+    """
+    Each parcel should only fully contain 0 or 1 buildings.
+    If there are two buildings fully within a parcel, that's bad.
+    This function is not directly active anywhere but may be useful
+    for debugging given this implementation of parcelization is
+    considerably less tested than our other code
+    """
+    bldgs_gdf['bID'] = np.arange(bldgs_gdf.shape[0])
+    parcels_gdf['pID'] = np.arange(parcels_gdf.shape[0])
+    contained = gpd.sjoin(parcels_gdf[['geometry','pID']], 
+                          bldgs_gdf[['geometry', 'bID']], 
+                          how='left', op='contains')
+    contained['has_bldg'] = contained['bID'].notna()
+    gb = contained.groupby('pID').sum()['has_bldg'].value_counts()
+    max_contain = gb.index.max()
+    assert max_contain <= 1, "ERROR - there are {} parcels containing {} buildings".format(max_contain, gb[max_contain])
+
+def get_bad_geoms(
+    parcels_gdf: gpd.GeoDataFrame,
+    bldgs_gdf: gpd.GeoDataFrame,
+    ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    """
+    Another utility for debugging/exploring/QC'ing the parcelization output.
+    There are instances where our parcels intersect more than one building
+    and this function identifies the 'bad' parcels and corresponding buildings.
+    From visual inspection we observe that parcels intersecting > 1 building is
+    due to slight imprecision when buildings are essentially touching
+    """
+    bldgs_gdf['bID'] = np.arange(bldgs_gdf.shape[0])
+    parcels_gdf['pID'] = np.arange(parcels_gdf.shape[0])
+    intersects = gpd.sjoin(parcels_gdf[['geometry','pID']], 
+                          bldgs_gdf[['geometry', 'bID']], 
+                          how='left', op='intersects')
+    intersects['has_bldg'] = intersects['bID'].notna()
+    bldg_counts = intersects.groupby('pID').sum()
+    bad_pID = bldg_counts[bldg_counts['has_bldg']>1].index.values
+
+    parcels_gdf.set_index('pID', inplace=True)
+    bad_parcels = parcels_gdf.iloc[bad_pID]
+    bad_bldgs = gpd.sjoin(bldgs_gdf[['geometry', 'bID']],
+                          bad_parcels.reset_index()[['geometry','pID']],
+                          how='inner', op='intersects'
+                          )
+    return bad_parcels, bad_bldgs

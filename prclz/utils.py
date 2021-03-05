@@ -61,7 +61,7 @@ def csv_to_geo(csv_path, add_file_col=False):
         f = csv_path.split("/")[-1]
         df['gadm_code'] = f.replace("blocks_", "").replace(".csv", "")
 
-    return gpd.GeoDataFrame(df, geometry='block_geom')
+    return gpd.GeoDataFrame(df, geometry='block_geom', crs='EPSG:4326')
 
 def load_geopandas_files(region: str, gadm_code: str, gadm: str) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
 

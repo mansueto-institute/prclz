@@ -3,8 +3,9 @@ from logging import basicConfig, info, debug
 import click
 
 from .etl import download, split_bldgs
-from .blocks import extract
-from . import complexity
+from .prclz import parcels
+#from .blocks import extract
+#from . import complexity
 
 @click.group()
 @click.option("--logging", 
@@ -38,9 +39,9 @@ def split_geojson():
     pass 
 
 @prclz.command()
-@click.argument("--bldg_file", type=str, required=True, help="Path to master geojson file containing all building polygons")
-@click.argument("--gadm_path", type=str, required=True, help="Path to GADM file")
-@click.argument("--output_dir", type=str, required=True, help="Output directory for gadm-specific building files")
+@click.option("--bldg_file", type=str, required=True, help="Path to master geojson file containing all building polygons")
+@click.option("--gadm_path", type=str, required=True, help="Path to GADM file")
+@click.option("--output_dir", type=str, required=True, help="Output directory for gadm-specific building files")
 def split_geojson_bldgs(bldg_file, gadm_path, output_dir):
     """ Split OSM buildings by GADM delineation. """
     split_bldgs.main(bldg_file, gadm_path, output_dir)
@@ -57,9 +58,13 @@ def blocks(gadm_path, linestrings_path, output_dir, gadm_level, overwrite):
     extract.main(gadm_path, linestrings_path, output_dir, gadm_level, overwrite)
 
 @prclz.command()
+@click.argument("blocks_path",    type = click.Path(exists = True))
+@click.argument("buildings_path", type = click.Path(exists = True))
+@click.argument("output_dir",     type = click.Path(exists = True))
+@click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
 def parcels():
     """ Split block into cadastral parcels. """
-    pass 
+    parcels.main(blocks_path, buildings_path, output_dir, overwrite)
 
 @prclz.command()
 @click.argument("blocks_path",    type = click.Path(exists = True))
