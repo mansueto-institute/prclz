@@ -265,6 +265,7 @@ def get_bad_geoms(
     return bad_parcels, bad_bldgs
 
 
+
 if __name__ == "__main__":
 
 
