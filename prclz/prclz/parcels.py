@@ -144,7 +144,7 @@ def find_parent_parcel_id(parcel: Polygon,
         bid = None 
         # NOTE: this does not imply failure, as many orphaned polys
         # are in areas w/o any buildings at all
-        info("Could not match orphaned parcel with centroid %sto neighboring parcel", centroid)
+        info("Could not match orphaned parcel with centroid %s to neighboring parcel", centroid)
 
     return bid
 
@@ -206,10 +206,7 @@ def main(
             parcels_gdf = make_parcels(bldgs, block)
             parcels_gdf['block_id'] = block_id
             all_parcels.append(parcels_gdf)
-            # if i == 0:
-            #     parcels_gdf = make_parcels(bldgs, block)
-            # else:
-            #     parcels_gdf = pd.concat([parcels_gdf, make_parcels(bldgs, block)])
+
         parcels_gdf = pd.concat(all_parcels)
         parcels_gdf.drop(columns=['uID'], inplace=True)
         parcels_gdf.to_file(output_path, driver='GeoJSON')
