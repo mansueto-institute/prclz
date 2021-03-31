@@ -235,8 +235,33 @@ class PlanarGraph(igraph.Graph):
         return graph
 
     @classmethod
+    def from_shapely(cls: Type,
+                     geom: Union[MultiPolygon, MultiLineString],
+                     ) -> PlanarGraph:
+        """
+        Convenience method for calling the appropriate constructor
+        based on the geomtype of geom
+        """
+        if isinstance(geom, MultiPolygon):
+            graph = cls.from_multipolygon(geom)
+        elif isinstance(geom, MultiLineString):
+            graph = cls.from_multilinestring(geom)
+        else:
+            if isinstance(geom, gpd.GeoSeries):
+                geom0 = geom.iloc[0]
+            else:
+                geom0 = geom[0]
+            if isinstance(geom0, Polygon):
+                graph = cls.from_multipolygon(geom)
+            elif isinstance(geom0, LineString):
+                graph = cls.from_multilinestring(geom)
+            else:
+                raise RuntimeError("Attempted creation of internal graph class with geom type {}".format(type(geom)))
+        return graph 
+
+    @classmethod
     def from_multipolygon(cls: Type, 
-                          multipolygon: MultiPolygon,
+                          multipolygon: Union[MultiPolygon, Sequence[Polygon]],
                           ) -> PlanarGraph:
         """
         Factory method for creating a graph representation of 
@@ -261,7 +286,7 @@ class PlanarGraph(igraph.Graph):
 
     @classmethod
     def from_multilinestring(cls: Type, 
-                             multilinestring: MultiLineString,
+                             multilinestring: Union[MultiLineString, Sequence[LineString]],
                              ) -> PlanarGraph:
         """
         Factory method for creating a graph representation of 
@@ -590,7 +615,6 @@ class PlanarGraph(igraph.Graph):
 
         if total_blgds > 0:
             self._cleanup_linestring_attr()
-        #return graph 
 
     def clean_graph(self) -> PlanarGraph:
         """
@@ -600,6 +624,7 @@ class PlanarGraph(igraph.Graph):
         is_conn = self.is_connected()
         if is_conn:
             num_components = 1
+            new_graph = self
         else:
             components = self.components(mode=igraph.WEAK)
             num_components = len(components)
@@ -607,9 +632,10 @@ class PlanarGraph(igraph.Graph):
             arg_max = np.argmax(comp_sizes)
             comp_indices = components[arg_max]
         
-            self = self.subgraph(comp_indices)
+            #self = self.subgraph(comp_indices)
+            new_graph = self.subgraph(comp_indices)
         info("Graph contains %s components", num_components)
-        return num_components
+        return num_components, new_graph
 
     def update_edge_types(self, 
                           block_polygon: Polygon, 
@@ -633,7 +659,17 @@ class PlanarGraph(igraph.Graph):
             Updates graph in place. Returns summary of matching
             check between parcel and block
         """
-        block_coords_list = list(block_polygon.exterior.coords)
+        if isinstance(block_polygon, Polygon):
+            block_coords_list = list(block_polygon.exterior.coords)
+        elif isinstance(block_polygon, LineString):
+            block_coords_list = list(block_polygon.coords)
+        elif isinstance(block_polygon, MultiLineString):
+            block_coords_list = []
+            for b in block_polygon:
+                block_coords_list.extend(list(b.coords))
+        else:
+            block_coords_list = list(block_polygon.exterior.coords)
+            #raise RuntimeError("In PlanarGraph.update_edge_types block_polygon type = {} but should be LineString or Polygon".format(type(block_polygon)))    
         coords = set(block_coords_list)
 
         rv = (None, None)
@@ -653,7 +689,7 @@ class PlanarGraph(igraph.Graph):
                 warning("%s of %s block coords are NOT in the parcel coords", missing, total)
 
         # Get list of coord_tuples from the polygon
-        assert block_coords_list[0] == block_coords_list[-1], "Not a complete linear ring for polygon"
+        #assert block_coords_list[0] == block_coords_list[-1], "Not a complete linear ring for polygon"
 
         # Loop over the block coords (as define an edge) and update the corresponding edge type in the graph accordingly
         # NOTE: every block coord will be within the parcel graph vertices
@@ -700,7 +736,7 @@ class PlanarGraph(igraph.Graph):
 
         # Now get the MST of that complete graph of only terminal_vertices
         if "weight" not in H.es.attributes():
-            error("----H graph does not have weight, ERROR There are %s", len(terminal_vertices))
+            error("----H graph does not have weight, ERROR There are %s terminal vertices", len(terminal_vertices))
         mst_edge_idxs = H.spanning_tree(weights='weight', return_tree=False)
 
         # Now, we join the paths for all the mst_edge_idxs
@@ -1160,7 +1196,6 @@ class PlanarGraph(igraph.Graph):
             del self.es['edge_type']
 
     def simplify_reblocked_graph(self):
-
         # Extract the optimal subgraph of new lines only
         def filter(edge) -> bool:
             if 'is_through_line' in edge.attributes():
@@ -1180,7 +1215,6 @@ class PlanarGraph(igraph.Graph):
 
             # And fetch the buffer area based on the width across 
             # that linestring/edge-sequence  
-
             edge_linestring, _, admiss_region, _ = opt_subgraph.get_steiner_linestrings(expand=False, return_polys=True, edge_seq=edges)
             edge_linestring = linemerge(edge_linestring)
 
@@ -1188,25 +1222,3 @@ class PlanarGraph(igraph.Graph):
             simplified_linestrings.append(simplified_linestring)
         return simplified_linestrings      
 
-
-# def convert_to_lines(planar_graph) -> MultiLineString:
-#     lines = [LineString(planar_graph.edge_to_coords(e)) for e in planar_graph.es]
-#     multi_line = unary_union(lines)
-#     return multi_line 
-
-
-# def find_edge_from_coords(g, coord0, coord1):
-#     '''
-#     Given a pair of coordinates, checks whether the graph g
-#     contains an edge between that coordinate pair
-#     '''
-#     v0 = g.vs.select(name_eq=coord0)
-#     v1 = g.vs.select(name_eq=coord1)
-#     if len(v0)==0 or len(v1)==0:
-#         return None 
-#     else:
-#         edge = g.es.select(_between=(v0, v1))
-#         if len(edge)==0:
-#             return None 
-#         else:
-#             return edge[0]

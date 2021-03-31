@@ -3,7 +3,9 @@ from logging import basicConfig, info, debug
 import click
 
 from .etl import download, split_bldgs
+from .prclz import parcels
 from .blocks import extract
+from .reblock import reblock
 from . import complexity
 
 @click.group()
@@ -38,9 +40,9 @@ def split_geojson():
     pass 
 
 @prclz.command()
-@click.argument("--bldg_file", type=str, required=True, help="Path to master geojson file containing all building polygons")
-@click.argument("--gadm_path", type=str, required=True, help="Path to GADM file")
-@click.argument("--output_dir", type=str, required=True, help="Output directory for gadm-specific building files")
+@click.option("--bldg_file", type=str, required=True, help="Path to master geojson file containing all building polygons")
+@click.option("--gadm_path", type=str, required=True, help="Path to GADM file")
+@click.option("--output_dir", type=str, required=True, help="Output directory for gadm-specific building files")
 def split_geojson_bldgs(bldg_file, gadm_path, output_dir):
     """ Split OSM buildings by GADM delineation. """
     split_bldgs.main(bldg_file, gadm_path, output_dir)
@@ -57,9 +59,13 @@ def blocks(gadm_path, linestrings_path, output_dir, gadm_level, overwrite):
     extract.main(gadm_path, linestrings_path, output_dir, gadm_level, overwrite)
 
 @prclz.command()
-def parcels():
+@click.argument("blocks_path",    type = click.Path(exists = True))
+@click.argument("buildings_path", type = click.Path(exists = True))
+@click.argument("output_dir",     type = click.Path(exists = True))
+@click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
+def parcels(blocks_path, buildings_path, output_dir, overwrite):
     """ Split block into cadastral parcels. """
-    pass 
+    parcels.main(blocks_path, buildings_path, output_dir, overwrite)
 
 @prclz.command()
 @click.argument("blocks_path",    type = click.Path(exists = True))
@@ -71,9 +77,42 @@ def complexity(blocks_path, buildings_path, output_dir, overwrite):
     complexity.main(blocks_path, buildings_path, output_dir, overwrite)
 
 @prclz.command()
-def reblock():
+@click.argument("buildings_path",    type = click.Path(exists = True))
+@click.argument("parcels_path", type = click.Path(exists = True))
+@click.argument("blocks_path",     type = click.Path(exists = True))
+@click.argument("output_dir",     type = click.Path(exists = True))
+@click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
+@click.option("--use_width", help = "use width for reblocking estimate", default = False, is_flag = True)
+@click.option("--simplify_roads", help = "simplify reblocked roads", default = False, is_flag = True)
+@click.option("--thru_streets_top_k", help = "connect top-k severe dead ends", default = False, is_flag = True)
+@click.option("--no_progress", help = "don't display reblocking progress", default = True, is_flag = True)
+@click.option("--block_list", help = "specify specific blocks to reblock", default = None)
+def reblock(
+    buildings_path: Union[Path, str], 
+    parcels_path: Union[Path, str], 
+    blocks_path: Union[Path, str], 
+    output_dir: Union[Path, str],
+    overwrite: bool = False,
+    use_width: bool = False, 
+    simplify_roads: bool = False,
+    thru_streets_top_k: Optional[int] = None,
+    no_progress: bool = True,
+    block_list: Optional[List[str]] = None,
+    ):
+    progress = not no_progress
     """ Generate least-cost reblocking network. """
-    pass 
+    reblock.main(buildings_path, 
+                 parcels_path, 
+                 blocks_path, 
+                 output_dir,
+                 overwrite,
+                 use_width, 
+                 simplify_roads,
+                 thru_streets_top_k,
+                 progress,
+                 block_list,
+                 )
+
 
 if __name__ == '__main__':
     prclz()
