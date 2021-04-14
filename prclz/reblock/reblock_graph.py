@@ -1,22 +1,20 @@
-from functools import reduce
-from itertools import chain, combinations, permutations
-from typing import List, Sequence, Tuple, Union, Type, Set, Callable
-from logging import debug, info, warning, error
-from pathlib import Path 
+from itertools import chain, combinations
+from logging import debug, error, info, warning
+from pathlib import Path
+from typing import Callable, List, Sequence, Set, Tuple, Union
+
 import geopandas as gpd
-import pandas as pd
 import geopy.distance as gpy
 import igraph
 import numpy as np
+import pandas as pd
 import tqdm
-from shapely.geometry import (LinearRing, LineString, MultiLineString,
-                              MultiPoint, MultiPolygon, Point, Polygon)
-from shapely.ops import cascaded_union, unary_union, linemerge
-from shapely.wkt import loads
+from shapely.geometry import (LineString, MultiLineString, MultiPoint,
+                              MultiPolygon, Point, Polygon)
+from shapely.ops import linemerge, unary_union
 
 BUF_EPS = 1e-4
 BUF_RATE = 2
-PlanarGraph = None
 
 def edge_seq_to_linestring(e_seq, graph):
 
@@ -28,8 +26,7 @@ def edge_seq_to_linestring(e_seq, graph):
 
 def map_pts(pt_list, pt0, pt1):
     '''
-    Helper function, assigns each pt in pt_list to whichever
-    node it's closer to btwn u and v
+    Assigns each point in pt_list to closest point between pt0 and pt1
     '''
     pt0_assign = []
     pt1_assign = []
@@ -38,44 +35,10 @@ def map_pts(pt_list, pt0, pt1):
             pt0_assign.append(pt)
         else:
             pt1_assign.append(pt)
-    assert len(pt0_assign) == len(pt1_assign), "Lens are not the same -- should be equal"
+    assert len(pt0_assign) == len(pt1_assign), "Lengths are not the same -- should be equal"
     return pt0_assign, pt1_assign
 
-def angle_btwn(pt0, pt1, pt2, degrees=False) -> float:
-    pt0 = np.array(pt0)
-    pt1 = np.array(pt1)
-    pt2 = np.array(pt2)
-
-    pt0 -= pt1
-    pt2 -= pt1 
-
-    unit_vec0 = pt0 / np.linalg.norm(pt0)
-    unit_vec2 = pt2 / np.linalg.norm(pt2)
-    dot = np.dot(unit_vec0, unit_vec2)
-    dot = np.clip(dot, -1, 1)
-    angle = np.arccos(dot)
-    if np.isnan(angle):
-        print("dot = {}".format(dot))
-    if degrees:
-        angle = np.degrees(angle)
-    return angle
-
-def calc_metric_closure(G: PlanarGraph,
-                   terminal_vertices: Sequence[igraph.Vertex],
-                   ) -> PlanarGraph:
-    # Build closed graph of terminal_vertices where each weight is the shortest path distance
-    H = PlanarGraph()
-    for u,v in combinations(terminal_vertices, 2):
-        path_idxs = G.get_shortest_paths(u, v, weights='weight', output='epath')
-        path_edges = G.es[path_idxs[0]]
-        path_distance = reduce(lambda x,y : x+y, map(lambda x: x['weight'], path_edges))
-        kwargs = {'weight':path_distance, 'path':path_idxs[0]}
-        H.add_edge(u['name'], v['name'], **kwargs)
-    return H
-
-def simplify_linestring(init_ls: LineString,
-                        admiss_region: Polygon,
-                        ) -> LineString:
+def simplify_linestring(init_ls: LineString, admiss_region: Polygon) -> LineString:
     '''
     Finds the simplest linestring maintaining the endpoints
     of the initial linestring, but only within the 
@@ -218,51 +181,37 @@ def vector_projection(edge_tuple, coords):
     else:
         assert False, "Vector projection failed"
 
-
-class PlanarGraph(igraph.Graph):
+class ReblockGraph(igraph.Graph):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.simplified = False
 
-    @classmethod
-    def from_edges(cls: Type, 
-                   edges: Sequence[Tuple[float, float]],
-                   ) -> PlanarGraph:
-        graph = cls()
-        for edge in edges:
-            graph.add_edge(*edge)
-        return graph
-
-    @classmethod
-    def from_shapely(cls: Type,
-                     geom: Union[MultiPolygon, MultiLineString],
-                     ) -> PlanarGraph:
+    @staticmethod
+    def from_shapely(geom: Union[MultiPolygon, MultiLineString]):
         """
         Convenience method for calling the appropriate constructor
         based on the geomtype of geom
         """
         if isinstance(geom, MultiPolygon):
-            graph = cls.from_multipolygon(geom)
+            graph = ReblockGraph.from_multipolygon(geom)
         elif isinstance(geom, MultiLineString):
-            graph = cls.from_multilinestring(geom)
+            graph = ReblockGraph.from_multilinestring(geom)
         else:
             if isinstance(geom, gpd.GeoSeries):
                 geom0 = geom.iloc[0]
             else:
                 geom0 = geom[0]
             if isinstance(geom0, Polygon):
-                graph = cls.from_multipolygon(geom)
+                graph = ReblockGraph.from_multipolygon(geom)
             elif isinstance(geom0, LineString):
-                graph = cls.from_multilinestring(geom)
+                graph = ReblockGraph.from_multilinestring(geom)
             else:
                 raise RuntimeError("Attempted creation of internal graph class with geom type {}".format(type(geom)))
         return graph 
 
-    @classmethod
-    def from_multipolygon(cls: Type, 
-                          multipolygon: Union[MultiPolygon, Sequence[Polygon]],
-                          ) -> PlanarGraph:
+    @staticmethod
+    def from_multipolygon(multipolygon: Union[MultiPolygon, Sequence[Polygon]]):
         """
         Factory method for creating a graph representation of 
         a multipolygon
@@ -271,9 +220,9 @@ class PlanarGraph(igraph.Graph):
             multipolygon: shapely geometry
 
         Returns:   
-            Creates a PlanarGraph instance
+            Creates a ReblockGraph instance
         """
-        pgraph = cls()
+        pgraph = ReblockGraph()
 
         for parcel_id, polygon in enumerate(multipolygon):
             nodes = polygon.exterior.coords 
@@ -283,11 +232,8 @@ class PlanarGraph(igraph.Graph):
                 prev_n = n 
         return pgraph 
 
-
-    @classmethod
-    def from_multilinestring(cls: Type, 
-                             multilinestring: Union[MultiLineString, Sequence[LineString]],
-                             ) -> PlanarGraph:
+    @staticmethod
+    def from_multilinestring(multilinestring: Union[MultiLineString, Sequence[LineString]]):
         """
         Factory method for creating a graph representation of 
         a multilinestring
@@ -296,22 +242,18 @@ class PlanarGraph(igraph.Graph):
             multilinestring: shapely geometry
 
         Returns:   
-            Creates a PlanarGraph instance
+            Creates a ReblockGraph instance
         """
-        pgraph = cls()
+        pgraph = ReblockGraph()
 
         for linestring in multilinestring:
             nodes = list(linestring.coords)
-            for i, n in enumerate(nodes):
-                if i!=0:
-                    pgraph.add_edge(n, nodes[i-1])
+            for (i, n) in enumerate(nodes[1:], start = 1):
+                pgraph.add_edge(n, nodes[i-1])
 
         return pgraph
 
-    def add_node(self, 
-                 coords: Tuple[float, float], 
-                 terminal: bool=False,
-                 ) -> None:
+    def add_node(self, coords: Tuple[float, float], terminal: bool=False) -> None:
         """
         Safely adds node, represented by coord pair, to the graph, 
         if needed. Allows for denoting nodes as terminal
@@ -382,6 +324,16 @@ class PlanarGraph(igraph.Graph):
             else:
                 edge_seq['parcel_id'][0].add(parcel_id)    
 
+    def metric_closure(self, terminal_vertices: Sequence[igraph.Vertex]):
+        """ Build closed graph of terminal_vertices where each weight is the shortest path distance """
+        H = ReblockGraph()
+        for (u, v) in combinations(terminal_vertices, 2):
+            path_idxs = self.get_shortest_paths(u, v, weights='weight', output='epath')
+            path_edges = self.es[path_idxs[0]]
+            path_distance = sum(map(lambda x: x['weight'], path_edges))
+            kwargs = {'weight':path_distance, 'path':path_idxs[0]}
+            H.add_edge(u['name'], v['name'], **kwargs)
+        return H
 
     def split_edge_by_node(self, 
         edge_tuple: Tuple[Tuple[float, float], Tuple[float, float]], 
@@ -588,7 +540,7 @@ class PlanarGraph(igraph.Graph):
             if edge.is_loop():
                 continue 
 
-            closest_node = PlanarGraph.closest_point_to_node(edge_tuple, coords)
+            closest_node = ReblockGraph.closest_point_to_node(edge_tuple, coords)
             closest_distance = distance(closest_node, coords)
             closest_edge_nodes.append(closest_node)
             closest_edge_distances.append(closest_distance)
@@ -604,9 +556,7 @@ class PlanarGraph(igraph.Graph):
         # Now add it
         self.split_edge_by_node(closest_edge, closest_node, terminal=terminal)
 
-    def add_buildings(self: PlanarGraph, 
-                      bldg_centroids: List[Point],
-                      ) -> PlanarGraph:
+    def add_buildings(self, bldg_centroids: List[Point]):
         """Add bldg centroids to planar graph"""
 
         total_blgds = len(bldg_centroids)
@@ -616,7 +566,7 @@ class PlanarGraph(igraph.Graph):
         if total_blgds > 0:
             self._cleanup_linestring_attr()
 
-    def clean_graph(self) -> PlanarGraph:
+    def clean_graph(self):
         """
         Some graphs are malformed bc of bad geometries and 
         we take the largest connected subgraph
@@ -637,11 +587,7 @@ class PlanarGraph(igraph.Graph):
         info("Graph contains %s components", num_components)
         return num_components, new_graph
 
-    def update_edge_types(self, 
-                          block_polygon: Polygon, 
-                          check: bool=False, 
-                          lines_pgraph: PlanarGraph=None,
-                          ) -> Tuple[int, int]:
+    def update_edge_types(self, block_polygon: Polygon, check: bool = False, lines_pgraph = None) -> Tuple[int, int]:
         """
         When reblocking, existing roads receive 0 weight. Existing roads
         are captured in the block_polygon, so given a graph and a 
@@ -669,7 +615,7 @@ class PlanarGraph(igraph.Graph):
                 block_coords_list.extend(list(b.coords))
         else:
             block_coords_list = list(block_polygon.exterior.coords)
-            #raise RuntimeError("In PlanarGraph.update_edge_types block_polygon type = {} but should be LineString or Polygon".format(type(block_polygon)))    
+            #raise RuntimeError("In ReblockGraph.update_edge_types block_polygon type = {} but should be LineString or Polygon".format(type(block_polygon)))    
         coords = set(block_coords_list)
 
         rv = (None, None)
@@ -723,7 +669,7 @@ class PlanarGraph(igraph.Graph):
         """
         Steiner Tree approx on the graph G, where the terminal nodes are
         determined by terminal_vertices. The graph must have a 'weight'
-        edge attr, which in the PlanarGraph class will default to the
+        edge attr, which in the ReblockGraph class will default to the
         Euclidean distance
 
         Args:
@@ -732,7 +678,7 @@ class PlanarGraph(igraph.Graph):
         Returns:
             Indices of the edges included in the Steiner approx
         """
-        H = calc_metric_closure(self, terminal_vertices)
+        H = self.metric_closure(terminal_vertices)
 
         # Now get the MST of that complete graph of only terminal_vertices
         if "weight" not in H.es.attributes():
@@ -778,7 +724,7 @@ class PlanarGraph(igraph.Graph):
         distance is low enough, then we can connect these two vertices
         and increase connectivity, creating a through-street.
 
-        NOTE: adds 'is_through_line' to PlanarGraph.es attributes
+        NOTE: adds 'is_through_line' to ReblockGraph.es attributes
         '''
         # Recalc edge weights, but save old weights to restore
         orig_weights = self.es['weight'][:]
@@ -787,13 +733,11 @@ class PlanarGraph(igraph.Graph):
         self.calc_edge_weight(cost_fn=cost_fn)
 
         terminal_vertices = self.vs.select(terminal_eq=True)
-        orig_metric_closure = calc_metric_closure(self, terminal_vertices)
+        orig_metric_closure = self.metric_closure(terminal_vertices)
         steiner_edges = self.es.select(steiner_eq=True)
         
         opt_subgraph = self.subgraph_edges(steiner_edges)
-        opt_metric_closure = calc_metric_closure(opt_subgraph, 
-                                                 opt_subgraph.vs.select(terminal_eq=True),
-                                                 )
+        opt_metric_closure = opt_subgraph.metric_closure(opt_subgraph.vs.select(terminal_eq=True))
 
         # Get ratio of new/orig shortest path distance
         combs_list = list(combinations(orig_metric_closure.vs, 2))

@@ -1,16 +1,16 @@
+from logging import info
+from pathlib import Path
+from typing import Sequence, Tuple, Union
+
 import geopandas as gpd
-import pandas as pd
-from shapely.geometry import (LinearRing, LineString, MultiLineString,
-                              MultiPoint, MultiPolygon, Point, Polygon)
-from shapely.ops import nearest_points
 import momepy
 import numpy as np
-from typing import List, Tuple, Union, Sequence
-from pathlib import Path
-from logging import warning, info
-#from ..utils import csv_to_geo
-import argparse
-from prclz.utils import csv_to_geo
+import pandas as pd
+from shapely.geometry import MultiPolygon, Polygon
+from shapely.ops import nearest_points
+
+from .utils import csv_to_geo
+
 
 def make_parcels(bldgs: Union[Sequence[Polygon], MultiPolygon],
                  block: Polygon,
@@ -168,7 +168,7 @@ def reunion(no_bldg: gpd.GeoDataFrame,
     return reunioned
 
 
-def main(
+def extract(
     blocks_path: Union[Path, str], 
     buildings_path: Union[Path, str], 
     output_dir: Union[Path, str], 
@@ -260,19 +260,6 @@ def get_bad_geoms(
     bad_parcels = parcels_gdf.iloc[bad_pID]
     bad_bldgs = gpd.sjoin(bldgs_gdf[['geometry', 'bID']],
                           bad_parcels.reset_index()[['geometry','pID']],
-                          how='inner', op='intersects'
+                          how = 'inner', op = 'intersects'
                           )
     return bad_parcels, bad_bldgs
-
-
-
-if __name__ == "__main__":
-
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("blocks_path", type = str)
-    parser.add_argument("buildings_path", type = str)
-    parser.add_argument("output_dir",     type = str)
-    parser.add_argument("--overwrite", help = "overwrite existing files", action='store_true')
-    args = parser.parse_args()
-    main(args.blocks_path, args.buildings_path, args.output_dir, args.overwrite)
