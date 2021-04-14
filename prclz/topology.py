@@ -1,5 +1,5 @@
 import pickle
-from itertools import chain, combinations, product
+from itertools import chain, product
 from logging import debug
 from typing import Iterable, Sequence
 
@@ -10,10 +10,8 @@ import rtree
 from shapely.geometry import LineString, MultiLineString, Point, Polygon
 
 MAX_CENTROID_DEGREE = 100 
-# DEFAULT_RTREE_PROPERTIES = rtree.index.Property(dimension=2, factor=0.3, leaf_capacity=1000)
 
-""" implementation of planar graph """
-
+""" Implementation of a Planar Graph """
 
 class Node:
     """ two-dimensional point container """
@@ -277,8 +275,7 @@ class PlanarGraph(nx.Graph):
     def __init__(self, name: str = "S", dual_order: int = 0, incoming_graph_data = None, **attr):
         attr["name"] = name
         attr["dual_order"] = dual_order
-        self.steiner_edges = [] 
-        super().__init__(incoming_graph_data=incoming_graph_data, **attr)
+        super().__init__(incoming_graph_data = incoming_graph_data, **attr)
 
     # static constructors for all the various ways we generate planar graphs 
     @staticmethod
@@ -455,29 +452,6 @@ class PlanarGraph(nx.Graph):
 
         # return inner_facelist
 
-    def _weak_dual(self):
-        dual = PlanarGraph(name = self.name, dual_order = self.graph["dual_order"] + 1)
-
-        if self.number_of_nodes() < 2:
-            return dual
-
-        inner_facelist = list(self.trace_faces())
-
-        if len(inner_facelist) == 1:
-            dual.add_node(inner_facelist[0].centroid())
-        else:
-            for (face1, face2) in combinations(inner_facelist, 2):
-                edges1 = [e for e in face1.edges if not e.road]
-                edges2 = [e for e in face2.edges if not e.road]
-
-                linestrings1 = [LineString([(e.nodes[0].x, e.nodes[0].y), (e.nodes[1].x, e.nodes[1].y)]) for e in edges1]
-                linestrings2 = [LineString([(e.nodes[0].x, e.nodes[0].y), (e.nodes[1].x, e.nodes[1].y)]) for e in edges2]
-
-                if len(set(edges1).intersection(edges2)) > 0 or any((e1.intersects(e2) and e1.touches(e2) and e1.intersection(e2).type != "Point") for (e1, e2) in product(linestrings1, linestrings2)):
-                    dual.add_edge(Edge((face1.centroid(), face2.centroid())))
-
-        return dual
-
     def weak_dual(self):
         dual = PlanarGraph(name = self.name, dual_order = self.graph["dual_order"] + 1)
         debug("building r tree for %s", self)
@@ -531,24 +505,6 @@ class PlanarGraph(nx.Graph):
         # Now add it
         self.split_edge_by_node(closest_edge, closest_node)
 
-    def steiner_tree_approx(self, verbose=False):
-        '''
-        All Nodes within the graph have an attribute, Node.terminal, which is a boolean
-        denoting whether they should be included in the set of terminal_nodes which
-        are connected by the Steiner Tree approximation
-        '''
-        terminal_nodes = [n for n in self.nodes if n.terminal]
-
-        #steiner_tree = nx_approx.steiner_tree(self, terminal_nodes)
-        #print("Calling steiner_tree fn within topology.py")
-        #stree = steiner_tree.steiner_tree(self, terminal_nodes, verbose=verbose)
-        stree = steiner_tree.coopers_steiner_tree(self, terminal_nodes, verbose=verbose)
-
-        # Hold onto the optimal edges
-        self.steiner_edges = list(stree.edges)
-
-        return stree 
-
     def plot(self, **kwargs):
         plt.axes().set_aspect(aspect=1)
         plt.axis("off")
@@ -566,37 +522,6 @@ class PlanarGraph(nx.Graph):
         nodes = nx.draw_networkx_nodes(self, **node_kwargs)
         if nodes:
             nodes.set_edgecolor("None")
-
-    def plot_reblock(self):
-        edge_kwargs = {}
-        node_kwargs = {}
-
-        plt.axes().set_aspect(aspect=1)
-        plt.axis('off')
-
-        #nlocs_terminal = {node: (node.x, node.y) for node in self.nodes if node.terminal}
-        nlocs_all = {node: (node.x, node.y) for node in self.nodes}
-        
-        # Edges
-        edge_kwargs['label'] = "_nolegend"
-        edge_kwargs['pos'] = nlocs_all 
-        edge_color_map = []
-        for e in self.edges:
-            c = 'r' if e in self.steiner_edges else 'b'
-            edge_color_map.append(c)
-        edge_kwargs["edge_color"] = edge_color_map
-        nx.draw_networkx_edges(self, **edge_kwargs)
-
-        # Nodes
-        node_kwargs["label"] = self.name
-        node_kwargs["pos"] = nlocs_all
-
-        node_color_map = []
-        for n in self.nodes:
-            c = 'r' if n.terminal else 'b'
-            node_color_map.append(c)
-        node_kwargs["node_color"] = node_color_map
-        nx.draw_networkx_nodes(self, **node_kwargs)
 
     def save(self, file_path):
         '''

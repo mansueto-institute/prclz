@@ -1,25 +1,22 @@
+from logging import warning
 from pathlib import Path
-from typing import List, Tuple, Callable, Union, Optional
+from typing import Callable, List, Optional, Tuple, Union
+
 import geopandas as gpd
 import igraph
-import tqdm 
-import numpy as np
 import pandas as pd
-from shapely.ops import polygonize
-from shapely.wkt import dumps
-from shapely.geometry import (LinearRing, LineString, MultiLineString,
-                              MultiPoint, MultiPolygon, Point, Polygon)
-from logging import basicConfig, debug, info, warning, error
-from shapely.ops import nearest_points
+import tqdm
+from shapely.geometry import (LineString, MultiLineString, MultiPoint,
+                              MultiPolygon, Point, Polygon)
+from shapely.ops import nearest_points, polygonize
 
-from .planar_graph import PlanarGraph
 from ..utils import csv_to_geo
+from .reblock_graph import ReblockGraph
+
 
 def block_to_gadm(block: str) -> str:
     """Just grabs the GADM from a block"""
-    block_rev = block[::-1]
-    idx = block_rev.index("_") + 1
-    return block[0:-idx]
+    return block[0:-(block[::-1].index("_") + 1)]
 
 def drop_buildings_intersecting_block(parcel_geom: LineString,
                                       bldg_centroids: List[Point],
@@ -143,7 +140,7 @@ def reblock(parcels: Union[MultiLineString, MultiPolygon],
             use_width: bool=False,
             simplify_roads: bool=False,
             thru_streets_top_k: Optional[int]=None,
-            ) -> Tuple[PlanarGraph, MultiLineString, MultiLineString]:
+            ) -> Tuple[ReblockGraph, MultiLineString, MultiLineString]:
     """
     Perform reblocking given parcels, target buildings, and the 
     block (i.e. the existing streets). Performs Steiner Tree approximation
@@ -163,7 +160,7 @@ def reblock(parcels: Union[MultiLineString, MultiPolygon],
                         straighter
 
     Returns:
-        The PlanarGraph representation, the new portion of the
+        The ReblockGraph representation, the new portion of the
         optimal road network, and the old portion of the optimal
         road network
     """
@@ -184,12 +181,12 @@ def reblock(parcels: Union[MultiLineString, MultiPolygon],
     #     to connect to the outside road network
     bldg_centroids = add_outside_node(block, bldg_centroids)
 
-    # [4] Convert parcel -> PlanarGraph
-    #graph = PlanarGraph.from_multilinestring(parcels)
-    graph = PlanarGraph.from_shapely(parcels)
+    # [4] Convert parcel -> ReblockGraph
+    #graph = ReblockGraph.from_multilinestring(parcels)
+    graph = ReblockGraph.from_shapely(parcels)
     graph.es['edge_type'] = None
 
-    # [5] Add bldg centroids to PlanarGraph as terminal nodes
+    # [5] Add bldg centroids to ReblockGraph as terminal nodes
     graph.add_buildings(bldg_centroids)
 
     # [6] Update the edge types to denote existing streets, per block geometry
@@ -199,7 +196,7 @@ def reblock(parcels: Union[MultiLineString, MultiPolygon],
     block_snapped = snap_block(block, parcels)
     graph.update_edge_types(block_snapped, check=True)
 
-    # [7 Optional] Add width to PlanarGraph based on bldg geoms
+    # [7 Optional] Add width to ReblockGraph based on bldg geoms
     if use_width or simplify_roads:
         graph.set_edge_width(buildings, simplify=True)
         graph.calc_edge_weight()
@@ -226,11 +223,11 @@ def reblock(parcels: Union[MultiLineString, MultiPolygon],
     return graph, new_path, existing_path
 
 def add_thru_streets(
-    graph: PlanarGraph,
+    graph: ReblockGraph,
     top_k: Optional[int]=None,
     ratio_cutoff: Optional[float]=None,
     cost_fn: Optional[Callable[[igraph.Edge], float]]=None,
-    ) -> Tuple[PlanarGraph, MultiLineString, MultiLineString]:
+    ) -> Tuple[ReblockGraph, MultiLineString, MultiLineString]:
     """
     The reblocking algorithm, by definition, tends to find
     trees which then leads to dead-ends in the streets. So,
@@ -261,8 +258,8 @@ def add_thru_streets(
     return graph, new_path, existing_path
 
 def simplify_streets(
-    graph: PlanarGraph,
-    ) -> Tuple[PlanarGraph, MultiLineString, MultiLineString]:
+    graph: ReblockGraph,
+    ) -> Tuple[ReblockGraph, MultiLineString, MultiLineString]:
     """
     The parcelization process results in candidates that are not
     representative of real life roads -- their shape is weird.

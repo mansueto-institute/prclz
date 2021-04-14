@@ -76,7 +76,6 @@ def read_file(path, **kwargs):
     raw["geometry"] = raw["geometry"].apply(shapely.wkt.loads)
     return gpd.GeoDataFrame(raw, geometry="geometry")
 
-
 def calculate_complexity(index, output, block, centroids, cache_files):
     block_cache = output.parent/(str(index) + ".block.cache")
     if block_cache.exists():
@@ -96,7 +95,6 @@ def calculate_complexity(index, output, block, centroids, cache_files):
     cache_files.append(block_cache)
 
     return (index, complexity, centroids_multipoint)
-
 
 def main(blocks_path: Path, buildings_path: Path, complexity_output: Path, overwrite: bool):
     if (not complexity_output.exists()) or (complexity_output.exists() and overwrite):

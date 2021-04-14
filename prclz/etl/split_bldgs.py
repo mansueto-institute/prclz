@@ -50,8 +50,7 @@ def main(
     else:
         gadm_file = gadm_path
     bldgs = gpd.read_file(str(bldg_file))
-    gadms = gpd.read_file(str(gadm_file))
-    gadms = clean_gadm_cols(gadms)
+    gadms = clean_gadm_cols(gpd.read_file(str(gadm_file)))
 
     bldgs = gpd.sjoin(bldgs, gadms, how='left', op='intersects')
     bldgs.drop(columns=['index_right'], inplace=True)
@@ -60,8 +59,7 @@ def main(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     for gadm, data in bldgs.groupby('gadm'):
-        f = "buildings_{}.geojson".format(gadm)
-        out_path = output_dir / f
+        out_path = output_dir / f"buildings_{gadm}.geojson"
 
         data.to_file(out_path, driver='GeoJSON')
         info("Creating file: %s", str(out_path))

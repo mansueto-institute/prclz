@@ -1,13 +1,10 @@
-import geopandas as gpd
-from shapely.geometry import LineString, Polygon
-from shapely.wkt import loads
 import unittest
-from logging import basicConfig, debug, info
+from logging import basicConfig
 
 from prclz.reblock import planar_graph
-#from prclz.reblock.planar_graph_utils import update_edge_types
-# import reblock2
-# from path_cost import FlexCost
+from shapely.geometry import LineString, Polygon
+from shapely.wkt import loads
+
 '''
 To-Do:
  - Do another round of refactoring
@@ -34,13 +31,6 @@ def make_square(lower_left_pt, w=1):
     pts.append(lower_left_pt)
     return LineString(pts)
 
-# def make_grid(lower_left_pt, h=3, w=3, delta=1):
-#     multi = []
-#     for i in range(w):
-#         for j in range(h):
-#             multi.append(make_square((i,j), delta))
-#     return multi 
-
 def create_test_grid(n):
     multi = []
     for i in range(n):
@@ -51,20 +41,6 @@ def create_test_grid(n):
             else:
                 multi.append(make_square((i,j), 1))
     return planar_graph.PlanarGraph.from_multilinestring(multi)
-
-# def create_connected_grid():
-#     linestrings = []
-#     linestrings.extend(make_grid((0,0), h=3,w=3,delta=1))
-#     linestrings.extend(make_grid((6,0), h=3,w=3,delta=1))
-#     connector = LineString([(3,0), (4,0), (5,0), (6,0)])
-#     linestrings.append(connector)
-#     g = planar_graph.PlanarGraph.from_multilinestring(linestrings)
-#     g.es['width'] = 5
-#     i = 1
-#     for e in g.es[[24, 25, 26]]:
-#         e['width'] = i
-#         i += 1
-#     return g 
 
 def make_grids_w_targets():
     grid = create_test_grid(2)

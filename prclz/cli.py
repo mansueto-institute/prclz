@@ -1,12 +1,14 @@
-from logging import basicConfig, info, debug
+from logging import basicConfig
+from pathlib import Path
+from typing import Optional, Sequence, Union
 
 import click
 
-from .etl import download, split_bldgs
-from .prclz import parcels
+from . import complexity, parcels
 from .blocks import extract
+from .etl import download, split_bldgs
 from .reblock import reblock
-from . import complexity
+
 
 @click.group()
 @click.option("--logging", 
@@ -16,11 +18,6 @@ from . import complexity
     show_default = True)
 def prclz(logging):
     basicConfig(level = logging)
-
-@prclz.command()
-def test_logging():
-    info("info")
-    debug("debug")
 
 @prclz.command()
 @click.argument("datasource", type = str, nargs = 1) 
@@ -35,15 +32,10 @@ def download(datasource, directory, countries, overwrite):
     download.main(datasource.lower(), directory, countries.split(",") if countries else countries, overwrite)
 
 @prclz.command()
-def split_geojson():
-    """ Split OSM data by GADM delineation. """
-    pass 
-
-@prclz.command()
 @click.option("--bldg_file", type=str, required=True, help="Path to master geojson file containing all building polygons")
 @click.option("--gadm_path", type=str, required=True, help="Path to GADM file")
 @click.option("--output_dir", type=str, required=True, help="Output directory for gadm-specific building files")
-def split_geojson_bldgs(bldg_file, gadm_path, output_dir):
+def split_geojson(bldg_file, gadm_path, output_dir):
     """ Split OSM buildings by GADM delineation. """
     split_bldgs.main(bldg_file, gadm_path, output_dir)
 
@@ -97,10 +89,10 @@ def reblock(
     simplify_roads: bool = False,
     thru_streets_top_k: Optional[int] = None,
     no_progress: bool = True,
-    block_list: Optional[List[str]] = None,
+    block_list: Optional[Sequence[str]] = None,
     ):
+    """ Generate least-cost reblocking network for analyzed block. """
     progress = not no_progress
-    """ Generate least-cost reblocking network. """
     reblock.main(buildings_path, 
                  parcels_path, 
                  blocks_path, 

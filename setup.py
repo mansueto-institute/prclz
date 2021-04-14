@@ -22,5 +22,23 @@ setuptools.setup(
     python_requires='>=3.6',
     entry_points = { 
         'console_scripts': ['prclz=prclz.cli:prclz']
-    }
+    }, 
+    install_requires=[
+        "wheel",
+        "setuptools",
+        "Click<8",
+        "shapely",
+        "geopandas",
+        "geos",
+        "momepy",
+        "python-igraph",
+        "networkx",
+        "scipy",
+        "pytess",
+        "matplotlib",
+        "rtree",
+        "psutil",
+        "urlpath",
+        "geopy"
+    ]
 )
