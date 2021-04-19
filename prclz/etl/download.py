@@ -1,5 +1,4 @@
-import argparse
-from logging import basicConfig, error, info
+from logging import error, info
 from pathlib import Path
 from typing import Dict, Optional, Sequence
 from zipfile import ZipFile
@@ -18,7 +17,7 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None) -> Dic
     root = Path(root)
     data_paths = {
         folder: root/folder for folder in 
-        ['input','geojson','blocks','buildings','parcels','lines','complexity','GADM','geojson_gadm', 'errors', 'cache'] + 
+        ['blocks', 'buildings', 'cache', 'complexity', 'errors', 'gadm', 'geofabrik', 'geojson', 'geojson_gadm', 'input', 'lines', 'parcels'] + 
         (additional if additional else [])
     }
     data_paths["root"] = root       
@@ -93,7 +92,7 @@ def get_geofabrik_data(data_root: str, country_regions: Dict[str, str], overwrit
 def main(data_source: str, data_root: str, country_codes: Optional[Sequence[str]], overwrite: bool):
     mappings = pd.read_csv(Path(__file__).parent/"country_codes.csv")
     if country_codes:
-        mappings = mappings[mappings.gadm.isin(country_codes)]
+        mappings = mappings[mappings.gadm_name.isin(country_codes)]
     if data_source.lower() == "gadm":
         gadm_mapping = mappings.dropna()\
             [["country", "gadm_name"]]\
@@ -106,4 +105,4 @@ def main(data_source: str, data_root: str, country_codes: Optional[Sequence[str]
             .set_index("geofabrik_name")\
             .to_dict()["geofabrik_region"]
         get_geofabrik_data(data_root, geofabrik_mapping, overwrite)
-    # argument parser validates that data source will be valid
+    # argument parser in cli.py validates that data source will be valid

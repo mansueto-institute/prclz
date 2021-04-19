@@ -18,7 +18,7 @@ pip install wheel
 
 echo "installing prclz"
 # handle shapely vs pygeos GEOS version mismatch; see https://github.com/Toblerity/Shapely/issues/651
-pip install --no-binary shapely shapely
+pip install --no-binary shapely,pygeos
 {
 pip install . 
 } 2>&1 | sed -e "s/^/    /g"

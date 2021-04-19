@@ -8,8 +8,6 @@ import pandas as pd
 import shapely.wkt
 from shapely.geometry import Polygon
 
-from .topology import Node, PlanarGraph
-
 
 def parse_ona_text(text: str) -> Polygon:
     str_coordinates = text.split(';')

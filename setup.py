@@ -5,15 +5,16 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="prclz",
-    version="0.6.0",
+    version="0.9.0",
     author="Mansueto Institute for Urban Innovation",
-    author_email="author@example.com",
+    author_email="@example.com",
     description="Code for analysis related to the Million Neighborhoods Project",
     long_description=long_description,
     long_description_content_type="text/markdown",
     include_package_data=True,
     url="https://github.com/mansueto-institute/prclz",
     packages=setuptools.find_packages(),
+    package_data = {"prclz": ["etl/country_codes.csv"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -27,6 +28,7 @@ setuptools.setup(
         "wheel",
         "setuptools",
         "Click<8",
+        "rtree",
         "shapely",
         "geopandas",
         "geos",
@@ -36,7 +38,6 @@ setuptools.setup(
         "scipy",
         "pytess",
         "matplotlib",
-        "rtree",
         "psutil",
         "urlpath",
         "geopy"

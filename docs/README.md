@@ -1,77 +1,120 @@
-# Cleaned and commented code for Million Neighborhoods Project
-## Data download and processing
+# documentation for `prclz` 
 
-#### 1. Download GADM data
-The GADM data provides boundaries which we use to partition the globe into computationally feasible parts
-From within data_processing/
-```python
-from prclz.data_processing import download_gadm
-download_gadm.update_gadm_data(data_root = "/path/to/your/data/directory/")
+The following are instructions for the command line interface to the `prclz` library. All of these operations are possible in client code that loads `prclz` as a dependency rather than a command line tool.
+
+## 0. installation
+
+We recommend installation from PyPI via `pip` into a virtual environment (managed by `venv` in this example, but compatible with `conda`, `poetry`, running a Docker image, etc.):
+```
+$ python3 -mvenv venv
+$ source ./venv/bin/activate
+pip install prclz 
 ```
 
-
-#### 2. Download Geofabrik data
-We use Geofabrik to get our OpenStreetMap raw data. Download this for all regions via the following command.
-From within data_processing/
-```python
-from prclz.data_processing import fetch_geofabrik_data
-fetch_geofabrik_data.update_geofabrik_data(data_root = "/path/to/your/data/directory/")
+Test your installation by running the `prclz` command without any arguments.
+```
+$ prclz
 ```
 
-#### 3. Extract buildings and lines from the raw Geofabrik data [SATEJ]
-The raw Geofabrik data is split into country-level files. This step creates a single "buildings" and a "lines" file for each country. The files are in "/data/geojson/"
-
-#### 4. Block extraction [SATEJ]
-Blocks are defined as regions fully circumscribed by roads or natural boundaries. Blocks are our most granular unit of analysis. This step extracts those blocks.
-
-#### 5. Split the country-specific building files by GADM
-Each country-level file is simply too huge for efficient computation. So, use the GADM boundaries to split the buildings files. This also functions as a data validation and QC point because along with the processed output in "/data/" the script will output country-level summaries about the matching of the OSM buildings with the GADM boundaries including list of non-matched buildings and a .png summary of the matching. 
-From within data_processing/
-```python
-from prclz.data_processing import split_geojson
-split_geojson.split_buildings(data_root = "/path/to/your/data/directory/")
+You should see the help prompt:
 ```
-NOTE: the default behavior is to process All the countries but if you want to process only one, then you can add the
-3-letter country code contained in "country_codes.csv"
-```python
-from prclz.data_processing import split_geojson
-split_geojson.split_buildings(data_root = "/path/to/your/data/directory/", gadm_name='DJI')
-```
+$ prclz 
 
-#### 6. Block complexity [SATEJ]
+Usage: prclz [OPTIONS] COMMAND [ARGS]...
 
-#### 7. Parcelization [NICO]
+Options:
+  --logging [CRITICAL|ERROR|WARNING|INFO|DEBUG]
+                                  set logging level  [default: INFO]
+  --help                          Show this message and exit.
 
-## Get example files
-```python
-from prclz.data_processing import setup_paths
-from prclz.prclz import i_topology_utils
-
-region = 'Africa'
-gadm_code = 'DJI'
-gadm = 'DJI.1.1_1'
-
-# Function to return data paths for example data 
-data_paths = setup_paths.get_example_paths()
-bldgs_gdf, lines_gdf, blocks_gdf, complexity_gdf, parcels_gdf = i_topology_utils.load_all_inputs(data_paths, region, gadm_code, gadm) 
-
+Commands:
+  blocks         Extract block geometry.
+  complexity     Calculate the k-index (complexity) of a block.
+  download       Download upstream data files.
+  parcels        Split block into cadastral parcels.
+  reblock        Generate least-cost reblocking network for analyzed block.
+  split-geojson  Split OSM buildings by GADM delineation.
 ```
 
-## Reblocking
+Given the multitude of geospatial package dependencies requiring linking to system-level C/C++ libraries and the myriad ways different platforms provide those libraries, you may get a warning about binary incompatibilities. One example is below:
 
-```python
-from prclz.data_processing import setup_paths
-from prclz.prclz import i_topology_utils, i_reblock
-
-region = 'Africa'
-gadm_code = 'DJI'
-gadm = 'DJI.1.1_1'
-block_id = 'DJI.1.1_1_1'
-
-# Function to return data paths for example data 
-data_paths = setup_paths.get_example_paths()
-parcels_df, buildings_df, blocks_df = i_topology_utils.load_reblock_inputs(data_paths, region, gadm_code, gadm)
-
-reblocking = i_reblock.reblock_block_id(parcels_df, buildings_df, blocks_df, block_id)
+``` 
+~/project/venv/lib/python3.8/site-packages/geopandas/_compat.py:106: UserWarning: The Shapely GEOS version (3.8.1-CAPI-1.13.3) is incompatible with the GEOS version PyGEOS was compiled with (3.9.0-CAPI-1.16.2). Conversions between both will be slow.
 ```
 
+In these cases, we recommend installing the conflicting packages from code rather than binary (wheel) sources:
+```
+pip install prclz --no-binary pygeos,shapely
+```
+
+In the example conflict provided, the non-wheel distribution of `shapely` simply links to existing installations of `GEOS` rather than providing on a bundled binary that conflicts with the one bundled by `pygeos`; see [this issue](https://github.com/Toblerity/Shapely/issues/651). You may have to take another approach to resolve other incompatibilities. Please [file a Github issue on the `prclz` repository](https://github.com/mansueto-institute/prclz/issues/new/choose) if you have other problems installing.
+
+## 1. download upstream data 
+
+### standard data layout
+The command line interface assumes a standard layout in a root data directory. Within the root directory, the default `download` subcommands will assume the directory structures looks like the following:
+```
+root
+  ├── GADM
+  ├── blocks
+  ├── buildings
+  ├── cache
+  ├── complexity
+  ├── errors
+  ├── geojson
+  ├── geojson_gadm
+  ├── input
+  ├── lines
+  └── parcels 
+
+```
+
+The `prclz download` subcommands will create these subdirectories if they do not exist. If you require a different layout, see the `build_data_dir()` method in the `prclz.etl` submodule.
+
+### Geofabrik
+To pull down all data from the Geofabrik mirror of OpenStreetMap to a directory, run:
+```
+prclz download geofabrik /path/to/data
+```
+
+You can also pass in a list of comma-delimited GADM codes to only download some countries, and force the command to overwrite any existing files:
+```
+prclz download geofabrik /path/to/data --countries SLE,LBR --overwrite
+```
+
+### GADM 
+The same `download` subcommand is used to download national and subnational administative boundaries from the GADM database.
+```
+prclz download gadm /path/to/data
+```
+
+Like the `geofabrik` datasource, the `gadm` datasource supports filtering and overwrite options:
+```
+prclz download gadm /path/to/data --countries SLE,LBR --overwrite
+```
+
+## 2. preprocess 
+
+### select building footprints and road networks from Geofabrik layers
+
+### split by GADM 
+
+## 3. determine city block geometry from road network boundaries 
+```
+prclz blocks /path/to/gadm /path/to/linestrings /path/to/output
+```
+
+## 4. calculate block complexity 
+```
+prclz complexity /path/to/block-geometry /path/to/building-footprints /path/to/output
+```
+
+## 5. determine cadastral parcel geometries
+```
+prclz parcels /path/to/block-geometry /path/to/building-footprints /path/to/output
+```
+
+## 6. create optimal access road network proposal
+```
+prclz reblock /path/to/building-footprints /path/to/parcel-boundaries /path/to/block-geometry /path/to/output
+```
