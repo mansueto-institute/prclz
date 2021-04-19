@@ -77,7 +77,6 @@ class Edge:
     with flags to indicate if the edge ios interior, road, or barrier """
 
     def __init__(self, nodes: Sequence[Node]):
-        # nodes = sorted(nodes, lambda p: (p.x, p.y))
         self.nodes = nodes
         self.interior = False
         self.road = False
@@ -85,104 +84,6 @@ class Edge:
 
     def length(self):
         return self.nodes[0].distance(self.nodes[1])
-
-    def min_distance_to_node(self, node):
-        '''
-        Just returns the min distance from the edge to the node
-        '''
-        x1,y1 = self.nodes[0]
-        x2,y2 = self.nodes[1]
-        x0,y0 = node 
-
-        num = np.abs((y2-y1)*x0 - (x2-x1)*y0 + x2*y1 - y2*x1)
-        den = np.sqrt((y2-y1)**2 + (x2-x1)**2)
-
-        return num/den 
-
-    def vector_projection(self, node):
-        '''
-        Returns the vector projection of node onto the LINE defined
-        by the edge
-        https://en.wikipedia.org/wiki/Vector_projection
-        https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
-        '''
-        a_vector = np.array(node.coordinates)
-
-        b_vector_node = self.nodes[0] - self.nodes[1]
-        b_vector = np.array(b_vector_node.coordinates)
-        b_unit = b_vector / np.linalg.norm(b_vector)
-
-        b_normal = np.array([-b_unit[1], b_unit[0]])
-
-        if not(np.abs(np.sum(b_normal*b_unit)) < 10e-4):
-            print()
-            print("a_vector = ", a_vector)
-            print("b_vector = ", b_vector)
-            print("b_normal = ", b_normal)
-            print("b_unit = ", b_unit)
-            print()
-
-        assert np.abs(np.sum(b_normal*b_unit)) < 10e-4, "b_normal and b_unit are not orthog"
-
-        #print("unit vector = {} | normal vector = {}".format(b_unit, b_normal))
-
-        min_distance = self.min_distance_to_node(node)
-
-        # Depending on the ordering the +/- can get reversed so this is 
-        # just a little hacky workaround to make it 100% robust
-        proj1 = a_vector + min_distance * b_normal
-        proj2 = a_vector - min_distance * b_normal
-
-        # The correct projection will min the new distance
-        node_proj1 = Node(proj1)
-        node_proj2 = Node(proj2)
-
-        if np.abs(self.min_distance_to_node(node_proj1)) < 10e-4:
-            return node_proj1
-        elif np.abs(self.min_distance_to_node(node_proj2)) < 10e-4:
-            return node_proj2
-        else:
-            assert False, "Vector projection failed"
-
-
-    def node_on_edge(self, node):
-        '''
-        Because line segments are finite, when calculating min distance from edge
-        to a point we need to check whether the projection onto the LINE defined by
-        the edge is in fact on the edge or outside of it
-        '''
-
-        mid_x = (self.nodes[0][0]+self.nodes[1][0]) / 2.
-        mid_y = (self.nodes[0][1]+self.nodes[1][1]) / 2.
-        mid_node = Node((mid_x, mid_y))
-
-        # NOTE: the distance from the midpoint of the edge to any point on the edge
-        #       cannot be greater than the dist to the end points
-        max_distance = mid_node.distance(self.nodes[0])
-        assert np.abs(mid_node.distance(self.nodes[0]) - mid_node.distance(self.nodes[1])) < 10e-4, "NOT TRUE MIDPOINT"
-
-        node_distance = mid_node.distance(node)
-
-        if node_distance > max_distance:
-            return False
-        else:
-            return True 
-
-    def closest_point_to_node(self, node):
-        '''
-        Returns the closest point on the edge, to the given node
-        '''
-
-        projected_node = self.vector_projection(node)
-        if self.node_on_edge(projected_node):
-            return projected_node
-        else:
-            dist_node0 = self.nodes[0].distance(node)
-            dist_node1 = self.nodes[1].distance(node)
-            if dist_node0 <= dist_node1:
-                return self.nodes[0]
-            else:
-                return self.nodes[1]
 
     def __str__(self):
         return "Edge(({}, {}), ({}, {}))".format(
@@ -472,38 +373,6 @@ class PlanarGraph(nx.Graph):
                     dual.add_edge(Edge((face1.centroid(), face2.centroid())))
 
         return dual
-
-    def add_node_to_closest_edge(self, node):
-        '''
-        Given the input node, this finds the closest point on each edge to that input node.
-        It then adds that closest node to the graph. It splits the argmin edge into two
-        corresponding edges so the new node is fully connected
-        '''
-        closest_edge_nodes = []
-        closest_edge_distances = []
-        edge_list = list(self.edges)
-
-        for edge_tuple in edge_list:
-
-            #Skip self-edges
-            if edge_tuple[0] == edge_tuple[1]:
-                #print("\nSKIPPING EDGE BC ITS A SELF-EDGE\n")
-                continue 
-            edge = Edge(edge_tuple)
-            closest_node = edge.closest_point_to_node(node)
-            closest_distance = closest_node.distance(node)
-            closest_edge_nodes.append(closest_node)
-            closest_edge_distances.append(closest_distance)
-
-        argmin = np.argmin(closest_edge_distances)
-        closest_node = closest_edge_nodes[argmin]
-        closest_edge = edge_list[argmin]
-
-        # Set attributes
-        closest_node.terminal = node.terminal 
-
-        # Now add it
-        self.split_edge_by_node(closest_edge, closest_node)
 
     def plot(self, **kwargs):
         plt.axes().set_aspect(aspect=1)
