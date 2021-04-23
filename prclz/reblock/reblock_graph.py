@@ -166,7 +166,6 @@ def vector_projection(edge_tuple, coords):
 
     assert np.abs(np.sum(b_normal*b_unit)) < 10e-4, "b_normal and b_unit are not orthog"
 
-    #min_distance = self.min_distance_to_node(node)
     min_distance = min_distance_from_point_to_line(coords, edge_tuple)
 
     # Depending on the ordering the +/- can get reversed so this is 

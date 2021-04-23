@@ -1,6 +1,6 @@
 import datetime
 import logging
-from logging import error, info, warning
+from logging import error, info, log, warning
 from pathlib import Path
 from typing import List, Union
 
@@ -45,10 +45,12 @@ def extract(index: str, geometry: Union[Polygon, MultiPolygon], linestrings: gpd
 def main(gadm_path: Path, linestrings_path: Path, output_dir: Path, gadm_level: int, overwrite: bool):
     timestamp = datetime.datetime.now().isoformat()
     logger = logging.getLogger()
-    logger.addHandler(logging.FileHandler(output_dir/(timestamp + "_main.log")))
+    log_dst = output_dir/"logs/blocks"
+    log_dst.mkdir(exist_ok = True, parents = True)
+    logger.addHandler(logging.FileHandler(log_dst/f"{gadm_path.stem}_{timestamp}.log"))
 
     index = str(gadm_path).split("/")[-1].replace(".csv", "")
-    filename = output_dir/("blocks_{}.csv".format(index))
+    filename = output_dir/f"blocks_{index}.csv"
 
     if (not filename.exists()) or (filename.exists() and overwrite):
         info("Reading geospatial data from files.")
@@ -80,7 +82,7 @@ def main(gadm_path: Path, linestrings_path: Path, output_dir: Path, gadm_level: 
                 extract(index, geometry, linestrings.iloc[ls_idx], filename, output_dir) 
             except Exception as e:
                 error("%s while processing %s: %s", type(e).__name__, index, e)
-                with open(output_dir/("error_{}".format(index)), 'a') as error_file:
+                with open(output_dir/f"error_{index}", 'a') as error_file:
                     print(e, file=error_file)
         log_memory_info("main", logger)
     else:

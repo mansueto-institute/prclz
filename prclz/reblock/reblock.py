@@ -1,4 +1,4 @@
-from logging import warning
+from logging import warning, info
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple, Union
 
@@ -62,10 +62,8 @@ def drop_buildings_intersecting_block(parcel_geom: LineString,
     # Now check which parcel geoms intersect with the block
     block_boundary = block_geom.boundary 
 
-    fn = lambda geom: geom.intersects(block_boundary)
-
     # And now return just the buildings that DO NOT have parcels on the border
-    m_has_building['parcel_intersects_block'] = m_has_building['parcel_geom'].apply(fn)
+    m_has_building['parcel_intersects_block'] = m_has_building['parcel_geom'].apply(lambda geom: geom.intersects(block_boundary))
 
     reblock_buildings = m_has_building[~m_has_building['parcel_intersects_block']]['geometry'].apply(lambda g: g.coords[0])
     return list(reblock_buildings.values)
@@ -137,9 +135,9 @@ def snap_block(
 def reblock(parcels: Union[MultiLineString, MultiPolygon],
             buildings: MultiPolygon,
             block: Polygon,
-            use_width: bool=False,
-            simplify_roads: bool=False,
-            thru_streets_top_k: Optional[int]=None,
+            use_width: bool = False,
+            simplify_roads: bool = False,
+            thru_streets_top_n: int = 0,
             ) -> Tuple[ReblockGraph, MultiLineString, MultiLineString]:
     """
     Perform reblocking given parcels, target buildings, and the 
@@ -153,7 +151,7 @@ def reblock(parcels: Union[MultiLineString, MultiPolygon],
         buildings: the buildings which will be our reblocking target
         block: existing road network
         use_width: if True, calculates weights as w = distance/width
-        thru_streets_top_k: if not None, will add thru streets to
+        thru_streets_top_n: if not None, will add thru streets to
                             mitigated dead ends resulting from reblocking.
                             Adds the top-k most severe dead ends
         simplify_roads: if True, does post-processing to make roads
@@ -211,10 +209,8 @@ def reblock(parcels: Union[MultiLineString, MultiPolygon],
     new_path, existing_path = graph.get_steiner_linestrings(expand=False)
 
     # [12] Optional - add thru streets
-    if thru_streets_top_k is not None:
-        graph, new_path, existing_path = add_thru_streets(graph,
-                                                          top_k=thru_streets_top_k,
-                                                          )
+    if thru_streets_top_n > 0:
+        graph, new_path, existing_path = add_thru_streets(graph, top_n=thru_streets_top_n)
 
     # [13] Optional - simplify to make streets straighter
     if simplify_roads:
@@ -224,7 +220,7 @@ def reblock(parcels: Union[MultiLineString, MultiPolygon],
 
 def add_thru_streets(
     graph: ReblockGraph,
-    top_k: Optional[int]=None,
+    top_n: int = 0,
     ratio_cutoff: Optional[float]=None,
     cost_fn: Optional[Callable[[igraph.Edge], float]]=None,
     ) -> Tuple[ReblockGraph, MultiLineString, MultiLineString]:
@@ -234,12 +230,12 @@ def add_thru_streets(
     this adds thru streets via certain criteria. It sorts dead-ends
     by the ratio of path length post-reblocking and path length
     over the parcel boundaries (i.e. min possible path). Then, 
-    the user can select to add the top_k most severe paths, or
+    the user can select to add the top_n most severe paths, or
     they can select to add all those over a certain threshold
 
     Args:
         graph: planar graph containing reblocking representation
-        top_k: if provided, will connect the top_k most severe dead-ends
+        top_n: if provided, will connect the top_n most severe dead-ends
         ratio_cutoff: if provided, will connect all those dead-ends
                       with severity over the threshold
         cost_fn: defaults to calculating path length via Euclidean 
@@ -250,7 +246,7 @@ def add_thru_streets(
         be a seamless post-processing step
         Graph, new roads, existing roads
     """
-    graph.add_through_lines(top_k=top_k,
+    graph.add_through_lines(top_n=top_n,
                             ratio_cutoff=ratio_cutoff,
                             cost_fn=cost_fn,
                             )
@@ -280,7 +276,7 @@ def main(buildings_path: Union[Path, str],
          overwrite: bool = False,
          use_width: bool = False, 
          simplify_roads: bool = False,
-         thru_streets_top_k: Optional[int] = None,
+         thru_streets_top_n: int = 0,
          progress: bool = True,
          block_list: Optional[List[str]] = None,
          ) -> None:
@@ -302,7 +298,7 @@ def main(buildings_path: Union[Path, str],
         output_dir: directory to save output reblocking file
         overwrite: if True, will save over work if output file exists
         use_width: if True, calculates weights as w = distance/width
-        thru_streets_top_k: if not None, will add thru streets to
+        thru_streets_top_n: if not None, will add thru streets to
                             mitigated dead ends resulting from reblocking.
                             Adds the top-k most severe dead ends
         simplify_roads: if True, does post-processing to make roads
@@ -323,14 +319,14 @@ def main(buildings_path: Union[Path, str],
     fname = "reblock_{}".format(gadm)
     if use_width:
         fname += "-width"
-    if thru_streets_top_k:
-        fname += '-thru{}'.format(thru_streets_top_k)
+    if thru_streets_top_n:
+        fname += '-thru{}'.format(thru_streets_top_n)
     if simplify_roads:
         fname += "-simplify"
     output_path = output_dir / (fname + ".geojson")
     
     if (not output_path.is_file()) or overwrite:
-        print("Saving reblocking to: {}".format(output_path))
+        info("Saving reblocking to: %s", output_path)
         output_dir.mkdir(parents=True, exist_ok=True)
 
         bldgs_gdf = gpd.read_file(buildings_path)
@@ -343,11 +339,8 @@ def main(buildings_path: Union[Path, str],
         new_roads = {}
         existing_roads = {}
 
-        if progress:
-            pbar = tqdm.tqdm(range(len(block_list)), total=len(block_list))
-        
         # Reblock each block ID independentally
-        for block_id in block_list:
+        for block_id in (tqdm.tqdm(block_list) if progress else block_list):
             parcels = parcels_gdf[parcels_gdf['block_id']==block_id]['geometry']
             block = blocks_gdf[blocks_gdf['block_id']==block_id]['geometry'].iloc[0]
             bldgs = bldgs_gdf[bldgs_gdf['block_id']==block_id]['geometry']
@@ -358,16 +351,12 @@ def main(buildings_path: Union[Path, str],
                 _, new, existing = reblock(parcels, bldgs, block,
                                            use_width=use_width,
                                            simplify_roads=simplify_roads,
-                                           thru_streets_top_k=thru_streets_top_k,
+                                           thru_streets_top_n=thru_streets_top_n,
                                            )
                 if new is not None:
                     new_roads[block_id] = ['new', new]
                 if existing is not None:
                     existing_roads[block_id] = ['existing', existing]
-
-            if progress:
-                pbar.update()
-
         
         new_roads = gpd.GeoDataFrame.from_dict(new_roads, 
                                                orient='index',
@@ -383,6 +372,6 @@ def main(buildings_path: Union[Path, str],
         reblock_gdf = reblock_gdf.loc[~reblock_gdf['geometry'].isna()]
         reblock_gdf.to_file(output_path, driver='GeoJSON')
     else:
-        print("Reblocking exists already at: {}".format(output_path))
+        info("Reblocking exists already at: %s", output_path)
 
 

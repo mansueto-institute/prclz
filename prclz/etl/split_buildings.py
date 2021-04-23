@@ -24,7 +24,7 @@ def clean_gadm_cols(gadms: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
 
 def main(
-    bldg_file: str,
+    building_file: str,
     gadm_path: str,
     output_dir: str,
     ) -> None:
@@ -34,7 +34,7 @@ def main(
     file by GADM and saves a file for each GADM in the output dir
 
     Args:
-        bldg_file: path to geojson w/ building polygons
+        building_file: path to geojson w/ building polygons
         gadm_path: path to GADM w/ gadm region polygons. NOTE, for convenience
                    also accepts directory containing all gadm files and finds the
                    highest res file within directory
@@ -49,7 +49,7 @@ def main(
         info("Loading GADM file: %s", gadm_file)
     else:
         gadm_file = gadm_path
-    bldgs = gpd.read_file(str(bldg_file))
+    bldgs = gpd.read_file(str(building_file))
     gadms = clean_gadm_cols(gpd.read_file(str(gadm_file)))
 
     bldgs = gpd.sjoin(bldgs, gadms, how='left', op='intersects')

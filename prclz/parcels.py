@@ -183,7 +183,7 @@ def extract(
     output_dir = Path(output_dir)
     
     gadm = blocks_path.stem.replace("blocks_","")
-    output_path = output_dir / "parcels_{}.geojson".format(gadm)
+    output_path = output_dir / f"parcels_{gadm}.geojson"
     output_path.parent.mkdir(exist_ok=True, parents=True)
     if (not output_path.is_file() ) or overwrite:
 
@@ -234,7 +234,7 @@ def check_within(
     contained['has_bldg'] = contained['bID'].notna()
     gb = contained.groupby('pID').sum()['has_bldg'].value_counts()
     max_contain = gb.index.max()
-    assert max_contain <= 1, "ERROR - there are {} parcels containing {} buildings".format(max_contain, gb[max_contain])
+    assert max_contain <= 1, f"ERROR - there are {max_contain} parcels containing {gb[max_contain]} buildings"
 
 def get_bad_geoms(
     parcels_gdf: gpd.GeoDataFrame,

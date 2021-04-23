@@ -17,7 +17,7 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None) -> Dic
     root = Path(root)
     data_paths = {
         folder: root/folder for folder in 
-        ['blocks', 'buildings', 'cache', 'complexity', 'errors', 'gadm', 'geofabrik', 'geojson', 'geojson_gadm', 'input', 'lines', 'parcels'] + 
+        ['blocks', 'buildings', 'cache', 'complexity', 'errors', 'gadm', 'geofabrik', 'geojson', 'geojson_gadm', 'input', 'lines', 'logs', 'parcels'] + 
         (additional if additional else [])
     }
     data_paths["root"] = root       

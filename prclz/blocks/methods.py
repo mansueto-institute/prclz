@@ -30,7 +30,7 @@ class BufferedLineDifference(BlockExtractionMethod):
         self.name    = name
 
     def __repr__(self):
-        return "BufferedLineDifference(epsilon={})".format(self.epsilon)
+        return f"BufferedLineDifference(epsilon={self.epsilon})"
 
     def extract(self, region: Union[Polygon, MultiPolygon], linestrings: MultiLineString) -> MultiPolygon:
         info("%sApplying buffer of %s.", "(" + self.name + ") " if self.name else "", self.epsilon)

@@ -7,7 +7,7 @@ setuptools.setup(
     name="prclz",
     version="0.9.0",
     author="Mansueto Institute for Urban Innovation",
-    author_email="@example.com",
+    author_email="miurbandata@uchicago.edu",
     description="Code for analysis related to the Million Neighborhoods Project",
     long_description=long_description,
     long_description_content_type="text/markdown",
