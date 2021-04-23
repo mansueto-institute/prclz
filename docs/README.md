@@ -18,8 +18,6 @@ $ prclz
 
 You should see the help prompt:
 ```
-$ prclz 
-
 Usage: prclz [OPTIONS] COMMAND [ARGS]...
 
 Options:
@@ -28,12 +26,12 @@ Options:
   --help                          Show this message and exit.
 
 Commands:
-  blocks         Extract block geometry.
-  complexity     Calculate the k-index (complexity) of a block.
-  download       Download upstream data files.
-  parcels        Split block into cadastral parcels.
-  reblock        Generate least-cost reblocking network for analyzed block.
-  split-geojson  Split OSM buildings by GADM delineation.
+  download         Download upstream data files.
+  split-buildings  Split OSM buildings by GADM delineation.
+  blocks           Define city block geometry.
+  parcels          Split block space into cadastral parcels.
+  complexity       Calculate k-index (complexity) of a city block.
+  reblock          Generate least-cost reblocking network for a city block.
 ```
 
 Given the multitude of geospatial package dependencies requiring linking to system-level C/C++ libraries and the myriad ways different platforms provide those libraries, you may get a warning about binary incompatibilities. One example is below:
