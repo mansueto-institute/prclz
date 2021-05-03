@@ -42,7 +42,6 @@ def download(datasource, directory, countries, overwrite):
 @click.argument("bldg_file",  type = str, required = True)
 @click.argument("gadm_path",  type = str, required = True)
 @click.argument("output_dir", type = str, required = True)
-@click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
 def split_buildings(bldg_file, gadm_path, output_dir):
     """ Split OSM buildings by GADM delineation. """
     split_buildings.main(bldg_file, gadm_path, output_dir)

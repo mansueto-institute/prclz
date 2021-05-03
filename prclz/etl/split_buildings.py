@@ -26,7 +26,7 @@ def clean_gadm_cols(gadms: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 def main(
     building_file: str,
     gadm_path: str,
-    output_dir: str,
+    output_dir: str
     ) -> None:
     """
     Given a path to a geojson containing all the building polygons
