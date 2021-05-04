@@ -27,6 +27,7 @@ def main(
     building_file: str,
     gadm_path: str,
     output_dir: str,
+    overwrite: bool = False
     ) -> None:
     """
     Given a path to a geojson containing all the building polygons
@@ -39,6 +40,8 @@ def main(
                    also accepts directory containing all gadm files and finds the
                    highest res file within directory
         output_dir: directory to save the resutling gadm-specific bldg files
+        overwrite: (bool) if True will overwrite extant buildings geojson, if False
+                   and file exists will skip
 
     Returns:
         None, saves out files to output_dir
@@ -60,7 +63,9 @@ def main(
 
     for gadm, data in bldgs.groupby('gadm'):
         out_path = output_dir / f"buildings_{gadm}.geojson"
-
+	if out_path.exists() and not overwrite:
+            info("Skipping creation of file: %s", str(out_path))
+            continue
         data.to_file(out_path, driver='GeoJSON')
         info("Creating file: %s", str(out_path))
 
