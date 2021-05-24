@@ -32,7 +32,7 @@ def download(src: URL, dst: Path, verbose) -> None:
     total_size = int(r.headers.get('content-length', 0))
     chunk_size = 512
     if verbose:
-        progress_bar = tqdm(total=block_size, unit='iB', unit_scale=True)
+        progress_bar = tqdm(total=chunk_size, unit='iB', unit_scale=True)
     with dst.open('wb') as fd:
         for content in r.iter_content(chunk_size=chunk_size):
             if verbose:
