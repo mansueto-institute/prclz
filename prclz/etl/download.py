@@ -76,7 +76,7 @@ def get_gadm_data(data_root: str, country_codes: Dict[str, str], overwrite: bool
         else:
             info("GADM file for %s exists and overwrite set to False; skipping", country_name)
 
-def get_geofabrik_data(data_root: str, country_regions: Dict[str, str], overwrite: bool = False, verbose: bool) -> None:
+def get_geofabrik_data(data_root: str, country_regions: Dict[str, str], overwrite: bool = False, verbose: bool = False) -> None:
     '''
     Given a geofabrik country name and the corresponding region, downloads the 
     geofabrik pbf file which contains all OSM data for that country. Checks whether
