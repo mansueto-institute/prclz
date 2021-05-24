@@ -2,7 +2,7 @@ from logging import error, info
 from pathlib import Path
 from typing import Dict, Optional, Sequence
 from zipfile import ZipFile
-
+from tqdm import tqdm
 import pandas as pd
 import requests
 from urlpath import URL
@@ -29,8 +29,12 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None) -> Dic
 
 def download(src: URL, dst: Path) -> None:
     r = requests.get(src, stream = True)
+    total_size = int(r.headers.get('content-length', 0))
+    block_size = 512
+    progress_bar = tqdm(total=block_size, unit='iB', unit_scale=True)
     with dst.open('wb') as fd:
         for content in r.iter_content(chunk_size = 512):
+            progress_bar.update(len(content))
             fd.write(content)
 
 def gadm_filename(country_code) -> str: 
