@@ -28,12 +28,12 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None) -> Dic
     return data_paths
 
 def download(src: URL, dst: Path) -> None:
-    r = requests.get(src, stream = True)
+    r = requests.get(src, stream=True)
     total_size = int(r.headers.get('content-length', 0))
-    block_size = 512
+    chunk_size = 512
     progress_bar = tqdm(total=block_size, unit='iB', unit_scale=True)
     with dst.open('wb') as fd:
-        for content in r.iter_content(chunk_size = 512):
+        for content in r.iter_content(chunk_size=chunk_size):
             progress_bar.update(len(content))
             fd.write(content)
 
@@ -56,7 +56,7 @@ def get_gadm_data(data_root: str, country_codes: Dict[str, str], overwrite: bool
         - overwrite: (bool) if True will overwrite contents, if False will skip if country code has been processed already
     '''
 
-    data_paths = build_data_dir(data_root, additional = ["zipfiles"])
+    data_paths = build_data_dir(data_root, additional=["zipfiles"])
 
     for (country_name, country_code) in country_codes.items():
         outpath = data_paths['gadm']/country_code

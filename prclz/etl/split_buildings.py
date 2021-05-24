@@ -63,7 +63,7 @@ def main(
 
     for gadm, data in bldgs.groupby('gadm'):
         out_path = output_dir / f"buildings_{gadm}.geojson"
-	if out_path.exists() and not overwrite:
+        if out_path.exists() and not overwrite:
             info("Skipping creation of file: %s", str(out_path))
             continue
         data.to_file(out_path, driver='GeoJSON')
