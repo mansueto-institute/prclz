@@ -2,7 +2,7 @@ from logging import error, info
 from pathlib import Path
 from typing import Dict, Optional, Sequence
 from zipfile import ZipFile
-
+from tqdm import tqdm
 import pandas as pd
 import requests
 from urlpath import URL
@@ -27,10 +27,16 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None) -> Dic
 
     return data_paths
 
-def download(src: URL, dst: Path) -> None:
-    r = requests.get(src, stream = True)
+def download(src: URL, dst: Path, verbose: bool) -> None:
+    r = requests.get(src, stream=True)
+    total_size = int(r.headers.get('content-length', 0))
+    chunk_size = 512
+    if verbose:
+        progress_bar = tqdm(total=chunk_size, unit='iB', unit_scale=True)
     with dst.open('wb') as fd:
-        for content in r.iter_content(chunk_size = 512):
+        for content in r.iter_content(chunk_size=chunk_size):
+            if verbose:
+                progress_bar.update(len(content))
             fd.write(content)
 
 def gadm_filename(country_code) -> str: 
@@ -52,7 +58,7 @@ def get_gadm_data(data_root: str, country_codes: Dict[str, str], overwrite: bool
         - overwrite: (bool) if True will overwrite contents, if False will skip if country code has been processed already
     '''
 
-    data_paths = build_data_dir(data_root, additional = ["zipfiles"])
+    data_paths = build_data_dir(data_root, additional=["zipfiles"])
 
     for (country_name, country_code) in country_codes.items():
         outpath = data_paths['gadm']/country_code
@@ -70,26 +76,26 @@ def get_gadm_data(data_root: str, country_codes: Dict[str, str], overwrite: bool
         else:
             info("GADM file for %s exists and overwrite set to False; skipping", country_name)
 
-def get_geofabrik_data(data_root: str, country_regions: Dict[str, str], overwrite: bool = False) -> None:
+def get_geofabrik_data(data_root: str, country_regions: Dict[str, str], overwrite: bool = False, verbose: bool = False) -> None:
     '''
     Given a geofabrik country name and the corresponding region, downloads the 
     geofabrik pbf file which contains all OSM data for that country. Checks whether
     the data has already been downloaded
     '''
     data_paths = build_data_dir(data_root)
-    for (name, region) in country_regions.items():
+    for (name, region) in country_regions.items():  
         outpath = data_paths["geofabrik"]/f"{name}-latest.osm.pbf"
         if overwrite or not outpath.exists():
             info("Downloading Geofabrik file for %s/%s", region, name)
             try: 
-                download(GEOFABRIK_URL/geofabrik_filename(region, name), outpath)
+                download(GEOFABRIK_URL/geofabrik_filename(region, name), outpath, verbose)
             except Exception as e:
                 error("Error downloading PBF for %s/%s: %s", region, name, e)
         else:
             info("Geofabrik file for %s/%s exists and overwrite set to False; skipping", region, name)
 
 
-def main(data_source: str, data_root: str, country_codes: Optional[Sequence[str]], overwrite: bool):
+def main(data_source: str, data_root: str, country_codes: Optional[Sequence[str]], overwrite: bool, verbose: bool):
     mappings = pd.read_csv(Path(__file__).parent/"country_codes.csv")
     if country_codes:
         mappings = mappings[mappings.gadm_name.isin(country_codes)]
@@ -104,5 +110,5 @@ def main(data_source: str, data_root: str, country_codes: Optional[Sequence[str]
             [["geofabrik_name", "geofabrik_region"]]\
             .set_index("geofabrik_name")\
             .to_dict()["geofabrik_region"]
-        get_geofabrik_data(data_root, geofabrik_mapping, overwrite)
+        get_geofabrik_data(data_root, geofabrik_mapping, overwrite, verbose)
     # argument parser in cli.py validates that data source will be valid
