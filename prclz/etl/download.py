@@ -27,7 +27,7 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None) -> Dic
 
     return data_paths
 
-def download(src: URL, dst: Path, verbose) -> None:
+def download(src: URL, dst: Path, verbose: bool) -> None:
     r = requests.get(src, stream=True)
     total_size = int(r.headers.get('content-length', 0))
     chunk_size = 512
