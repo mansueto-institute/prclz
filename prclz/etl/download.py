@@ -49,7 +49,7 @@ def geofabrik_filename(region, name) -> str:
         return "north-america/us/puerto-rico-latest.osm.pbf"
     return f"{region}/{name}-latest.osm.pbf"
 
-def get_gadm_data(data_root: str, country_codes: Dict[str, str], overwrite: bool = False) -> None:
+def get_gadm_data(data_root: str, country_codes: Dict[str, str], overwrite: bool = False, verbose: bool = False) -> None:
     '''
     Downloads and unzips GADM files
 
