@@ -67,7 +67,7 @@ def get_gadm_data(data_root: str, country_codes: Dict[str, str], overwrite: bool
             info("Downloading GADM file for %s", country_name)
             filepath = gadm_filename(country_code)
             try: 
-                download(GADM_URL/filepath, data_paths["zipfiles"]/filepath) 
+                download(GADM_URL/filepath, data_paths["zipfiles"]/filepath, verbose) 
                 with ZipFile(data_paths["zipfiles"]/filepath) as z:
                     z.extractall(outpath)
             except Exception as e:
