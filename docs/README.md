@@ -27,7 +27,7 @@ Options:
 
 Commands:
   download         Download upstream data files.
-  split-buildings  Split OSM buildings by GADM delineation.
+  splitbuildings   Split OSM buildings by GADM delineation.
   blocks           Define city block geometry.
   parcels          Split block space into cadastral parcels.
   complexity       Calculate k-index (complexity) of a city block.
