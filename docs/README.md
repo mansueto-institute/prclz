@@ -27,7 +27,7 @@ Options:
 
 Commands:
   download         Download upstream data files.
-  split-buildings  Split OSM buildings by GADM delineation.
+  splitbuildings   Split OSM buildings by GADM delineation.
   blocks           Define city block geometry.
   parcels          Split block space into cadastral parcels.
   complexity       Calculate k-index (complexity) of a city block.
@@ -107,7 +107,7 @@ cd scripts
 Additionally, the building footprints need to assigned to GADMs in order to be enable parallel processing of `prclz` functions at country-scale. 
 
 ```
-prclz split-buildings /geofabrik/buildings.geojson /gadm/country-boundaries.shp /path/to/output
+prclz splitbuildings /geofabrik/buildings.geojson /gadm/country-boundaries.shp /path/to/output
 ```
 
 ## 3. determine city block geometry from road network boundaries 
