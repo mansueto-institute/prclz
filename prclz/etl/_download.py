@@ -6,6 +6,7 @@ from tqdm import tqdm
 import pandas as pd
 import requests
 from urlpath import URL
+from sys import exit
 
 GADM_URL      = URL("https://biogeo.ucdavis.edu/data/gadm3.6/shp")
 GEOFABRIK_URL = URL("http://download.geofabrik.de/")
@@ -20,11 +21,21 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None) -> Dic
         ['blocks', 'buildings', 'cache', 'complexity', 'errors', 'gadm', 'geofabrik', 'geojson', 'geojson_gadm', 'input', 'lines', 'logs', 'parcels'] + 
         (additional if additional else [])
     }
-    data_paths["root"] = root       
+    info('Downloading will create the following repositories:')
+    for dir_path in data_paths.values():
+        info(f'{dir_path}')
+    user_response = input('Do you wish to proceed with download to the specified folder? Please enter "y" or "n".')
+    while user_response.lower() not in ['y', 'n']:
+        user_repsonse = input('Please enter "y" or "n".')
+    if user_response == 'y':
+        user_response = input('Downloading will create the following repositories: ')
+        data_paths["root"] = root       
 
-    for v in data_paths.values():
-        v.mkdir(parents=True, exist_ok=True)
-
+        for path in data_paths.values():
+            dir_path.mkdir(parents=True, exist_ok=True)
+    else:
+        info('Download will not proceed and folders will not be created.')
+        exit()
     return data_paths
 
 def download(src: URL, dst: Path, verbose: bool) -> None:
@@ -96,7 +107,7 @@ def get_geofabrik_data(data_root: str, country_regions: Dict[str, str], overwrit
 
 
 def main(data_source: str, data_root: str, country_codes: Optional[Sequence[str]], overwrite: bool, verbose: bool):
-    mappings = pd.read_csv(Path(__file__).parent/"country_codes.csv")
+    mappings = pd.read_csv(Path(__file__).parent / "country_codes.csv")
     if country_codes:
         mappings = mappings[mappings.gadm_name.isin(country_codes)]
     if data_source.lower() == "gadm":

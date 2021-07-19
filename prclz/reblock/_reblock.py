@@ -11,7 +11,7 @@ from shapely.geometry import (LineString, MultiLineString, MultiPoint,
 from shapely.ops import nearest_points, polygonize
 
 from ..utils import csv_to_geo
-from .reblock_graph import ReblockGraph
+from ._reblock_graph import ReblockGraph
 
 
 def block_to_gadm(block: str) -> str:

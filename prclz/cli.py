@@ -4,11 +4,11 @@ from typing import Optional, OrderedDict, Sequence, Union
 
 import click
 
-from . import complexity, parcels
-from .blocks import extract
+from . import _complexity, _parcels
+from .blocks import extract as _extract_blocks
 from .etl import download as _download
-from .etl import split_buildings
-from .reblock import reblock
+from .etl import split_buildings as _split_buildings
+from .reblock import reblock as _reblock
 
 # from https://github.com/pallets/click/issues/513#issuecomment-301046782
 class DefinitionOrderGroup(click.Group):
@@ -24,6 +24,7 @@ class DefinitionOrderGroup(click.Group):
     help = "set logging level", 
     type = click.Choice([ "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]), 
     show_default = True)
+
 def prclz(logging):
     basicConfig(level = logging)
 
@@ -39,15 +40,23 @@ def download(datasource, directory, countries, overwrite, verbose):
         raise click.BadParameter("Datasource must be one of [gadm|geofabrik]")
     _download.main(datasource.lower(), directory, countries.split(",") if countries else countries, overwrite, verbose)
 
+
+@prclz.commaind()
+@click.argument("pbf_path", type = click.Path(exists=True))
+@click.argument("output_dir", type = click.Path(exists=True))
+@click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
+def extract(pbf_path, output_dir, overwrite):
+    """ Run the extract shell script """
+    _extract(Path(pbf_path), Path(output_dir), overwrite)
+
 @prclz.command()
 @click.argument("bldg_file",  type = str, required = True)
 @click.argument("gadm_path",  type = str, required = True)
 @click.argument("output_dir", type = str, required = True)
 @click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
-def splitbuildings(bldg_file, gadm_path, output_dir, overwrite):
+def split_buildings(bldg_file, gadm_path, output_dir, overwrite):
     """ Split OSM buildings by GADM delineation. """
-    split_buildings.main(bldg_file, gadm_path, output_dir, overwrite)
-
+    _split_buildings.main(bldg_file, gadm_path, output_dir, overwrite)
 
 @prclz.command()
 @click.argument("gadm_path",        type = click.Path(exists = True))
@@ -57,7 +66,7 @@ def splitbuildings(bldg_file, gadm_path, output_dir, overwrite):
 @click.option("--overwrite",  help = "overwrite existing files", default = False, is_flag = True)
 def blocks(gadm_path, linestrings_path, output_dir, gadm_level, overwrite):
     """ Define city block geometry. """
-    extract.main(Path(gadm_path), Path(linestrings_path), Path(output_dir), gadm_level, overwrite)
+    _extract_blocks.main(Path(gadm_path), Path(linestrings_path), Path(output_dir), gadm_level, overwrite)
 
 @prclz.command()
 @click.argument("blocks_path",    type = click.Path(exists = True))
@@ -66,7 +75,7 @@ def blocks(gadm_path, linestrings_path, output_dir, gadm_level, overwrite):
 @click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
 def parcels(blocks_path, buildings_path, output_dir, overwrite):
     """ Split block space into cadastral parcels. """
-    parcels.main(Path(blocks_path), Path(buildings_path), Path(output_dir), overwrite)
+    _parcels.main(Path(blocks_path), Path(buildings_path), Path(output_dir), overwrite)
 
 @prclz.command()
 @click.argument("blocks_path",    type = click.Path(exists = True))
@@ -75,7 +84,7 @@ def parcels(blocks_path, buildings_path, output_dir, overwrite):
 @click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
 def complexity(blocks_path, buildings_path, output_dir, overwrite):
     """ Calculate k-index (complexity) of a city block. """
-    complexity.main(Path(blocks_path), Path(buildings_path), Path(output_dir), overwrite)
+    _complexity.main(Path(blocks_path), Path(buildings_path), Path(output_dir), overwrite)
 
 @prclz.command()
 @click.argument("buildings_path", type = click.Path(exists = True))
@@ -101,7 +110,7 @@ def reblock(
     overwrite:      bool = False,
     ):
     """ Generate least-cost reblocking network for a city block. """
-    reblock.main(
+    _reblock.main(
         Path(buildings_path),
         Path(parcels_path),
         Path(blocks_path),
