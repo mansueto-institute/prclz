@@ -40,7 +40,6 @@ def download(datasource, directory, countries, overwrite, verbose):
         raise click.BadParameter("Datasource must be one of [gadm|geofabrik]")
     _download.main(datasource.lower(), directory, countries.split(",") if countries else countries, overwrite, verbose)
 
-
 @prclz.commaind()
 @click.argument("pbf_path", type = click.Path(exists=True))
 @click.argument("output_dir", type = click.Path(exists=True))
