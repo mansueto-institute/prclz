@@ -14,6 +14,6 @@ def _extract(pbf_path: Path, output_dir: Path, overwrite: bool):
     if output == 0:
         info('extract.sh completed successfully')
     else:
-    error('extract.sh failed')
-        raise Exception
+        error('extract.sh failed')
+            raise Exception
 
