@@ -26,15 +26,14 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None, permis
         for path in data_paths.values():
             dir_path.mkdir(parents=True, exist_ok=True)
     else:
-        info('Downloading will create the following repositories:')
+        info('Downloading will create the following repositories if they do not already exist:')
         for dir_path in data_paths.values():
             info(f'{dir_path.resolve()}')
         user_response = input('Do you wish to proceed with download to the specified folder? Please enter "y" or "n".')
         while user_response.lower() not in ['y', 'n']:
             user_repsonse = input('Please enter "y" or "n"')
         if user_response == 'y':
-            data_paths["root"] = root       
-
+            data_paths["root"] = root
             for path in data_paths.values():
                 dir_path.mkdir(parents=True, exist_ok=True)
         else:

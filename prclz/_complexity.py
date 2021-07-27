@@ -117,7 +117,7 @@ def main(blocks_path: Path, buildings_path: Path, complexity_output_dir: Path, o
         info("Restructuring complexity calculations by block_id index.")
         block_buildings = block_buildings.join(pd.DataFrame(complexity, columns=["block_id", "complexity", "centroids_multipoint"]).set_index("block_id"))
 
-        complexity_output_file = complexity_output / ('complexity_' + buildings_path.stem.strip('buildings_') + '.csv')
+        complexity_output_file = complexity_output_dir / ('complexity_' + buildings_path.stem.strip('buildings_') + '.csv')
         info("Serializing complexity calculations to %s.", complexity_output_file)
         block_buildings[['geometry', 'complexity', 'centroids_multipoint']].to_csv(complexity_output_file)
         # cleanup 
