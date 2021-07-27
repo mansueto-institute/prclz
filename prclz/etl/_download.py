@@ -28,12 +28,11 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None, permis
     else:
         info('Downloading will create the following repositories:')
         for dir_path in data_paths.values():
-            info(f'{dir_path}')
+            info(f'{dir_path.resolve()}')
         user_response = input('Do you wish to proceed with download to the specified folder? Please enter "y" or "n".')
         while user_response.lower() not in ['y', 'n']:
-            user_repsonse = input('Please enter "y" or "n".')
+            user_repsonse = input('Please enter "y" or "n"')
         if user_response == 'y':
-            user_response = input('Downloading will create the following repositories: ')
             data_paths["root"] = root       
 
             for path in data_paths.values():
