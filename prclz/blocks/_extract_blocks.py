@@ -8,7 +8,7 @@ import geopandas as gpd
 import pandas as pd
 import psutil
 import shapely.wkt
-from prclz.blocks.methods import BufferedLineDifference
+from prclz.blocks._methods import BufferedLineDifference
 from prclz.utils import get_gadm_level_column
 from psutil._common import bytes2human
 from shapely.geometry import MultiPolygon, Polygon

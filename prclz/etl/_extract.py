@@ -2,7 +2,7 @@ from logging import error, info
 from pathlib import Path
 from subprocess import call
 
-def _extract(pbf_path: Path, output_dir: Path, overwrite: bool):
+def extract(pbf_path: Path, output_dir: Path, overwrite: bool):
     """Call the extract script to extract a pbf"""
     output_files = ['lines', 'building_linestrings', 'building_polygons']
     output_dir   = Path(output_dir).resolve()

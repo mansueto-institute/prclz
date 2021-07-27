@@ -5,10 +5,9 @@ from typing import Optional, OrderedDict, Sequence, Union
 import click
 
 from . import _complexity, _parcels
-from .blocks import extract as _extract_blocks
-from .etl import download as _download
-from .etl import split_buildings as _split_buildings
-from .reblock import reblock as _reblock
+from .blocks import _extract_blocks
+from .etl import _download, _split_buildings, _extract
+from .reblock import _reblock
 
 # from https://github.com/pallets/click/issues/513#issuecomment-301046782
 class DefinitionOrderGroup(click.Group):
@@ -41,13 +40,13 @@ def download(datasource, directory, countries, overwrite, verbose, y):
         raise click.BadParameter("Datasource must be one of [gadm|geofabrik]")
     _download.main(datasource.lower(), directory, countries.split(",") if countries else countries, overwrite, verbose, y)
 
-@prclz.commaind()
+@prclz.command()
 @click.argument("pbf_path", type = click.Path(exists=True))
 @click.argument("output_dir", type = click.Path(exists=True))
 @click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
 def extract(pbf_path, output_dir, overwrite):
     """ Run the extract shell script """
-    _extract(Path(pbf_path), Path(output_dir), overwrite)
+    _extract.extract(Path(pbf_path), Path(output_dir), overwrite)
 
 @prclz.command()
 @click.argument("bldg_file",  type = str, required = True)
