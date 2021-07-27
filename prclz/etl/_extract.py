@@ -10,7 +10,6 @@ def _extract(pbf_path: Path, output_dir: Path, overwrite: bool):
         error(f"One or more of the files to be extracted already exist in {str(output_dir)} and overwrite is set to False")
         raise Exception
     extract_path = Path(Path(__file__).resolve().parent.parent) / 'scripts'
-    print(['bash', 'extract.sh', pbf_path.resolve(), str(output_dir)])
     output = call(['bash', 'extract.sh', pbf_path.resolve(), str(output_dir)+'/'], cwd=str(extract_path))
     if output == 0:
         info('extract.sh completed successfully')

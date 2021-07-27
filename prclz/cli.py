@@ -34,11 +34,12 @@ def prclz(logging):
 @click.option("--countries", help = "comma-delimited list of GADM codes to filter", default = None, required = False)
 @click.option("--overwrite", help = "overwrite existing files", default = False, is_flag = True)
 @click.option("--verbose", help = "Show progress bar for download", default = False, is_flag = True)
-def download(datasource, directory, countries, overwrite, verbose):
+@click.option("--y", help = "Automatically agree to directory creation", default = False, is_flag = True)
+def download(datasource, directory, countries, overwrite, verbose, y):
     """ Download upstream data files. """
     if datasource.lower() not in ["gadm", "geofabrik"]:
         raise click.BadParameter("Datasource must be one of [gadm|geofabrik]")
-    _download.main(datasource.lower(), directory, countries.split(",") if countries else countries, overwrite, verbose)
+    _download.main(datasource.lower(), directory, countries.split(",") if countries else countries, overwrite, verbose, y)
 
 @prclz.commaind()
 @click.argument("pbf_path", type = click.Path(exists=True))

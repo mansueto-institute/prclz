@@ -14,15 +14,17 @@ setuptools.setup(
     include_package_data=True,
     url="https://github.com/mansueto-institute/prclz",
     packages=setuptools.find_packages(),
-    package_data = {"prclz": ["etl/country_codes.csv"]},
+    package_data={"prclz": ["etl/country_codes.csv", 
+                            "scripts/extrct.sh",
+                            "scripts/osmconf.ini"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
-    entry_points = { 
-        'console_scripts': ['prclz=prclz.cli:prclz']
+    python_requires=">=3.6",
+    entry_points={ 
+        "console_scripts": ["prclz=prclz.cli:prclz"]
     }, 
     install_requires=[
         "wheel",
