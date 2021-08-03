@@ -4,7 +4,16 @@ The following are instructions for the command line interface to the `prclz` lib
 
 ## 0. installation
 
-We recommend installation from PyPI via `pip` into a virtual environment (managed by `venv` in this example, but compatible with `conda`, `poetry`, running a Docker image, etc.):
+We recommend installation from PyPI via `pip` into a virtual environment (managed by `venv` in this example, but compatible with `conda`, `poetry`, running a Docker image, etc.). We have found that the easiest way to use this package is to create a miniconda environment and installing it using:
+
+```
+$ conda create --name prclz_env
+$ conda activate prclz_env
+$ pip install prclz
+$ conda install -c conda-forge gdal
+```
+
+Alternatively, you could use venv like so:
 ```
 $ python3 -mvenv venv
 $ source ./venv/bin/activate
