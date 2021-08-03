@@ -8,7 +8,7 @@ import geopandas as gpd
 import pandas as pd
 import psutil
 import shapely.wkt
-from prclz.blocks.methods import BufferedLineDifference
+from prclz.blocks._methods import BufferedLineDifference
 from prclz.utils import get_gadm_level_column
 from psutil._common import bytes2human
 from shapely.geometry import MultiPolygon, Polygon
@@ -28,7 +28,6 @@ def read_file(path, **kwargs):
     raw["geometry"] = raw["geometry"].apply(shapely.wkt.loads)
     return gpd.GeoDataFrame(raw, geometry="geometry")
 
-
 def extract(index: str, geometry: Union[Polygon, MultiPolygon], linestrings: gpd.GeoDataFrame, target: Path, output_dir: Path) -> None:
     info("Running extraction for %s", index)
     log_memory_info(index, logging.getLogger())
@@ -41,7 +40,6 @@ def extract(index: str, geometry: Union[Polygon, MultiPolygon], linestrings: gpd
     info("Serialized blocks from %s to %s", index, target)
     log_memory_info(index, logging.getLogger())
 
-
 def main(gadm_path: Path, linestrings_path: Path, output_dir: Path, gadm_level: int, overwrite: bool):
     timestamp = datetime.datetime.now().isoformat()
     logger = logging.getLogger()
@@ -49,7 +47,7 @@ def main(gadm_path: Path, linestrings_path: Path, output_dir: Path, gadm_level: 
     log_dst.mkdir(exist_ok = True, parents = True)
     logger.addHandler(logging.FileHandler(log_dst/f"{gadm_path.stem}_{timestamp}.log"))
 
-    index = str(gadm_path).split("/")[-1].replace(".csv", "")
+    index = gadm_path.stem
     filename = output_dir/f"blocks_{index}.csv"
 
     if (not filename.exists()) or (filename.exists() and overwrite):

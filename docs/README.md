@@ -67,7 +67,7 @@ root
 
 ```
 
-The `prclz download` subcommands will create these subdirectories if they do not exist. If you require a different layout, see the `build_data_dir()` method in the `prclz.etl` submodule.
+The `prclz download` subcommands will create these subdirectories if they do not exist. If you require a different layout, see the `build_data_dir()` method in the `prclz.etl` submodule. 
 
 ### Geofabrik
 To pull down all data from the Geofabrik mirror of OpenStreetMap to a directory, run:
@@ -75,9 +75,30 @@ To pull down all data from the Geofabrik mirror of OpenStreetMap to a directory,
 prclz download geofabrik /path/to/output
 ```
 
-You can also pass in a list of comma-delimited GADM codes to only download some countries, and force the command to overwrite any existing files:
+You can also pass in a list of comma-delimited GADM codes to only download some countries, force the command to overwrite any existing files, and show a progress bar:
 ```
-prclz download geofabrik /path/to/output --countries SLE,LBR --overwrite
+prclz download geofabrik . --countries SLE,LBR --overwrite --verbose
+```
+
+If you run this command from whatever your root directory is for prclz, your file structure will look like the following:
+
+```
+root
+  ├── GADM
+  ├── blocks
+  ├── buildings
+  ├── cache
+  ├── complexity
+  ├── errors
+  ├── geofabrik
+        ├── sierra-leone-latest.osm.pbf
+        ├── liberia-latest.osm.pbf
+  ├── geojson
+  ├── geojson_gadm
+  ├── input
+  ├── lines
+  └── parcels
+
 ```
 
 ### GADM 
@@ -88,39 +109,250 @@ prclz download gadm /path/to/output
 
 Like the `geofabrik` datasource, the `gadm` datasource supports filtering and overwrite options:
 ```
-prclz download gadm /path/to/output --countries SLE,LBR --overwrite
+prclz download gadm . --countries SLE,LBR --overwrite
+```
+
+If you run this command from whatever your root directory is for prclz, your file structure will look like the following:
+
+```
+root
+  ├── GADM
+        ├── LBR
+            ...
+        ├── SLE 
+             ├── license.txt
+             ├── gadm36_SLE_3.shx
+             ├── gadm36_SLE_3.shp
+             ├── gadm36_SLE_3.prj
+             ├── gadm36_SLE_3.dbf
+             ├── gadm36_SLE_3.cpg
+             ├── gadm36_SLE_2.shx
+             ├── gadm36_SLE_2.shp
+             ├── gadm36_SLE_2.prj
+             ├── gadm36_SLE_2.dbf
+             ├── gadm36_SLE_2.cpg
+             ├── gadm36_SLE_1.shx
+             ├── gadm36_SLE_1.shp
+             ├── gadm36_SLE_1.prj
+             ├── gadm36_SLE_1.dbf
+             ├── gadm36_SLE_1.cpg
+             ├── gadm36_SLE_0.shx
+             ├── gadm36_SLE_0.shp
+             ├── gadm36_SLE_0.prj
+             ├── gadm36_SLE_0.dbf
+             ├── gadm36_SLE_0.cpg
+  ├── blocks
+  ├── buildings
+  ├── cache
+  ├── complexity
+  ├── errors
+  ├── geofabrik
+        ├── sierra-leone-latest.osm.pbf
+        ├── liberia-latest.osm.pbf
+  ├── geojson
+  ├── geojson_gadm
+  ├── input
+  ├── lines
+  ├── parcels
+  └── zipfiles
+        ├── gadm36_SLE_shp.zip
+        ├── gadm36_LBR_shp.zip
+
 ```
 
 ## 2. preprocess (optional)
 
 ### select building footprints and road networks from Geofabrik layers
 
-The relevant geometry for this workflow resides in the `lines`, `polygons`, and `multipolygons` layers of the Geofabrik downloaded file. The relevant operations to extract these features are expressed most succintly with GDAL file format conversion tools; we provide a convenience shell script in the `/scripts` directory to replicate our OpenStreetMap workflow:
+The relevant geometry for this workflow resides in the `lines`, `polygons`, and `multipolygons` layers of the Geofabrik downloaded file. The relevant operations to extract these features are expressed most succintly with GDAL file format conversion tools; we provide a wrapper function called `extract` to get these layers:
 
 ```
-cd scripts
-./extract.sh /path/to/geofabrik/file /path/to/output
+prclz extract osm_file.pbf output_directory/ --overwrite
+```
+
+If you were to run this with the sierra-leone-latest.osm.pbf file downloaded in one of the previous steps, your call would look like the following if run from your root directory for prclz:
+
+```
+prclz extract geofabrik/sierra-leone-latest.osm.pbf geofabrik/
+```
+
+Similar to other functions, you can add an overwrite flag to this command. The command above would result in this file structure:
+
+```
+root
+  ├── GADM
+        ├── LBR
+            ...
+        ├── SLE 
+            ...
+  ├── blocks
+  ├── buildings
+  ├── cache
+  ├── complexity
+  ├── errors
+  ├── geofabrik
+        ├── sierra-leone-latest.osm.pbf
+        ├── liberia-latest.osm.pbf
+        ├── sierra-leone_lines.geojson
+        ├── sierra-leone_building_linestrings.geojson
+        ├── sierra-leone_building_polygons.geojson
+  ├── geojson
+  ├── geojson_gadm
+  ├── input
+  ├── lines
+  ├── parcels
+  └── zipfiles
+        ├── gadm36_SLE_shp.zip
+        ├── gadm36_LBR_shp.zip
+
+
 ```
 
 ### split by GADM 
 
-Additionally, the building footprints need to assigned to GADMs in order to be enable parallel processing of `prclz` functions at country-scale. 
+Additionally, the building footprints need to assigned to GADMs in order to be enable parallel processing of `prclz` functions at country-scale. In our current filesystem, we would run split-buildings for Sierra Leone by writing:
 
 ```
-prclz splitbuildings /geofabrik/buildings.geojson /gadm/country-boundaries.shp /path/to/output
+prclz split-buildings geofabrik/sierra-leone_building_polygons.geojson gadm/SLE/gadm36_SLE_3.shp buildings/
+```
+
+After this, our file system will look similar to the following:
+
+```
+root
+  ├── GADM
+        ├── LBR
+            ...
+        ├── SLE 
+            ...
+  ├── blocks
+  ├── buildings
+        ├── buildings_SLE.4.2.1_1.geojson
+        ├── buildings_SLE.4.1.4_1.geojson
+        ├── buildings_SLE.4.1.3_1.geojson
+        ├── buildings_SLE.4.1.2_1.geojson
+        ├── buildings_SLE.4.1.1_1.geojson
+        ├── buildings_SLE.3.3.8_1.geojson
+        ├── buildings_SLE.3.3.4_1.geojson
+        ├── buildings_SLE.3.2.5_1.geojson
+        ├── buildings_SLE.3.1.8_1.geojson
+        ├── buildings_SLE.3.1.13_1.geojson
+        ├── buildings_SLE.2.5.7_1.geojson
+        ├── buildings_SLE.2.5.5_1.geojson
+        ├── buildings_SLE.2.5.1_1.geojson
+        ├── buildings_SLE.2.5.11_1.geojson
+        ├── buildings_SLE.2.4.9_1.geojson
+        ├── buildings_SLE.2.4.5_1.geojson
+        ├── buildings_SLE.2.3.6_1.geojson
+        ├── buildings_SLE.2.3.5_1.geojson
+        ├── buildings_SLE.2.2.3_1.geojson
+        ├── buildings_SLE.2.1.7_1.geojson
+        ├── buildings_SLE.2.1.1_1.geojson
+        ├── buildings_SLE.1.2.4_1.geojson
+        ├── buildings_SLE.1.2.16_1.geojson
+        ├── buildings_SLE.1.2.13_1.geojson
+        ├── buildings_SLE.1.2.12_1.geojson
+        └── buildings_SLE.1.1.6_1.geojson
+  ├── cache
+  ├── complexity
+  ├── errors
+  ├── geofabrik
+        ├── sierra-leone-latest.osm.pbf
+        ├── liberia-latest.osm.pbf
+        ├── sierra-leone_lines.geojson
+        ├── sierra-leone_building_linestrings.geojson
+        └── sierra-leone_building_polygons.geojson
+  ├── geojson
+  ├── geojson_gadm
+  ├── input
+  ├── lines
+  ├── parcels
+  └── zipfiles
+        ├── gadm36_SLE_shp.zip
+        └── gadm36_LBR_shp.zip
 ```
 
 ## 3. determine city block geometry from road network boundaries 
 To determine city block delineations, pass for each administrative unit, pass in the administrative unit boundaries, and the national road network.
 
 ```
-prclz blocks /path/to/gadm /path/to/linestrings /path/to/output
+prclz blocks gadm/SLE/gadm36_SLE_3.shp geofabrik/sierra-leone_lines.geojson blocks/
+```
+
+After running this, your file structure should look like the following, with a different date as the name of the log file:
+
+```
+root
+  ├── GADM
+        ├── LBR
+            ...
+        ├── SLE 
+            ...
+  ├── blocks
+        ├── blocks_gadm36_SLE_3.csv
+        ├── logs
+              ├── blocks
+                    ├── gadm36_SLE_3_2021-07-20T10:43:27.654212.log
+  ├── buildings
+        ...
+  ├── cache
+  ├── complexity
+  ├── errors
+  ├── geofabrik
+        ├── sierra-leone-latest.osm.pbf
+        ├── liberia-latest.osm.pbf
+        ├── sierra-leone_lines.geojson
+        ├── sierra-leone_building_linestrings.geojson
+        └── sierra-leone_building_polygons.geojson
+  ├── geojson
+  ├── geojson_gadm
+  ├── input
+  ├── lines
+  ├── parcels
+  └── zipfiles
+        ├── gadm36_SLE_shp.zip
+        └── gadm36_LBR_shp.zip
 ```
 
 ## 4. calculate block complexity 
-To calculate the city block complexity measure, pass in the city block geometry and building footprints.
+To calculate the city block complexity measure, pass in the city block geometry and building footprints. You will need to pass in the building footprint files one at a time. For example:
 ```
-prclz complexity /path/to/block-geometry /path/to/building-footprints /path/to/output
+prclz complexity blocks/blocks_gadm36_SLE_3.csv buildings/buildings_SLE.1.1.6_1.geojson complexity/ --overwrite
+```
+Similar to other functions, you can pass an overwrite flag (--overwrite) to complexity. The call above will result in a file structure similar to the following:
+
+```
+root
+  ├── GADM
+        ├── LBR
+            ...
+        ├── SLE 
+            ...
+  ├── blocks
+        ├── blocks_gadm36_SLE_3.csv
+        ├── logs
+              ├── blocks
+                    ├── gadm36_SLE_3_2021-07-20T10:43:27.654212.log
+  ├── buildings
+        ...
+  ├── cache
+  ├── complexity
+        ├── complexity_SLE.1.1.6_1.csv
+  ├── errors
+  ├── geofabrik
+        ├── sierra-leone-latest.osm.pbf
+        ├── liberia-latest.osm.pbf
+        ├── sierra-leone_lines.geojson
+        ├── sierra-leone_building_linestrings.geojson
+        └── sierra-leone_building_polygons.geojson
+  ├── geojson
+  ├── geojson_gadm
+  ├── input
+  ├── lines
+  ├── parcels
+  └── zipfiles
+        ├── gadm36_SLE_shp.zip
+        └── gadm36_LBR_shp.zip
 ```
 
 ## 5. determine cadastral parcel geometries

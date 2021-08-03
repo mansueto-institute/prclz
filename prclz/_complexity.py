@@ -96,8 +96,8 @@ def calculate_complexity(index, output, block, centroids, cache_files):
 
     return (index, complexity, centroids_multipoint)
 
-def main(blocks_path: Path, buildings_path: Path, complexity_output: Path, overwrite: bool):
-    if (not complexity_output.exists()) or (complexity_output.exists() and overwrite):
+def main(blocks_path: Path, buildings_path: Path, complexity_output_dir: Path, overwrite: bool):
+    if (not complexity_output_dir.exists()) or (complexity_output_dir.exists() and overwrite):
         info("Reading geospatial data from files.")
         blocks    = read_file(str(blocks_path), index_col="block_id", usecols=["block_id", "geometry"], low_memory=False)
         buildings = read_file(str(buildings_path), low_memory=False)
@@ -112,13 +112,14 @@ def main(blocks_path: Path, buildings_path: Path, complexity_output: Path, overw
 
         cache_files = []
         info("Calculating block complexity.")
-        complexity = [calculate_complexity(idx, complexity_output, block, centroids, cache_files) for (idx, block, centroids) in block_buildings[["geometry", "centroids"]].itertuples()]
+        complexity = [calculate_complexity(idx, complexity_output_dir, block, centroids, cache_files) for (idx, block, centroids) in block_buildings[["geometry", "centroids"]].itertuples()]
         
         info("Restructuring complexity calculations by block_id index.")
         block_buildings = block_buildings.join(pd.DataFrame(complexity, columns=["block_id", "complexity", "centroids_multipoint"]).set_index("block_id"))
 
-        info("Serializing complexity calculations to %s.", complexity_output)
-        block_buildings[['geometry', 'complexity', 'centroids_multipoint']].to_csv(complexity_output)
+        complexity_output_file = complexity_output_dir / ('complexity_' + buildings_path.stem.strip('buildings_') + '.csv')
+        info("Serializing complexity calculations to %s.", complexity_output_file)
+        block_buildings[['geometry', 'complexity', 'centroids_multipoint']].to_csv(complexity_output_file)
         # cleanup 
         info("Removing cache files.")
         for cache_file in cache_files:

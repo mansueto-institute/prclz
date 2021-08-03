@@ -2,3 +2,5 @@ include README.md
 include LICENSE
 include prclz/__init__.py
 include prclz/etl/country_codes.csv
+include prclz/scripts/extract.sh
+include prclz/scripts/osmconf.ini
