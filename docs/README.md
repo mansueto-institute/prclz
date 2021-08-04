@@ -13,6 +13,22 @@ $ pip install prclz
 $ conda install -c conda-forge gdal
 ```
 
+On Midway, run:
+```
+module avail python
+module load python/anaconda-2020.02
+conda create -n prclz_env_pygeos 
+source activate prclz_env_pygeos
+conda config --env --add channels conda-forge
+conda config --env --set channel_priority strict
+conda install pygeos --channel conda-forge
+conda install requests
+conda install urlpath
+conda install geopandas
+```
+which will create a cona environment called prclz_env_pygeos, download the packages in the correct order, and install the relevant requirements. 
+
+
 Alternatively, you could use venv like so:
 ```
 $ python3 -mvenv venv
