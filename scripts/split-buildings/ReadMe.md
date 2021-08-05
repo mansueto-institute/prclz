@@ -1,4 +1,4 @@
-## Split Building 
+## How to split large building .shp files into GADM-level .geojson files
 
 Iterate through Zipped .shp building files and split them into GADM-level .geojson files for each country.
 
