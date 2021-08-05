@@ -100,7 +100,7 @@ output_dir=/project2/bettencourt/mnp/analytics/data/buildings
 python split_buildings.py --log_path $log_path --codes_file $codes_file --progress_file $progress_file --gadm_path $gadm_path --input_dir $input_dir --output_dir $output_dir
 ```
 
-#### Run `bigmem2` sbatch job on large files
+#### Run `bigmem2` [.sbatch script](https://github.com/mansueto-institute/prclz/blob/master/scripts/split-buildings/midway-deployment/split_buildings_job_midway_big.sbatch) on large files using this building [codes_file](https://github.com/mansueto-institute/prclz/blob/master/scripts/split-buildings/midway-deployment/ecopia_country_codes_big.csv)
 
 ```
 module load python/anaconda-2020.02
@@ -109,7 +109,7 @@ sbatch /project2/bettencourt/mnp/analytics/scripts/split_ecopia/split_buildings_
 squeue --user=<cnetid>
 ```
 
-#### Run `broadwl` sbatch job on rest of files
+#### Run `broadwl` [.sbatch script](https://github.com/mansueto-institute/prclz/blob/master/scripts/split-buildings/midway-deployment/split_buildings_job_midway.sbatch) on rest of files using this building [codes_file](https://github.com/mansueto-institute/prclz/blob/master/scripts/split-buildings/midway-deployment/ecopia_country_codes.csv)
 
 ```
 module load python/anaconda-2020.02
