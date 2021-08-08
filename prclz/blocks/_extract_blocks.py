@@ -28,7 +28,7 @@ def read_file(path, **kwargs):
     raw["geometry"] = raw["geometry"].apply(shapely.wkt.loads)
     return gpd.GeoDataFrame(raw, geometry="geometry")
 
-def extract(index: str, geometry: Union[Polygon, MultiPolygon], linestrings: gpd.GeoDataFrame, target: Path, output_dir: Path) -> None:
+def extract(index: str, geometry: Union[Polygon, MultiPolygon], linestrings: gpd.GeoDataFrame, target: Path, output_path: Path) -> None:    
     info("Running extraction for %s", index)
     log_memory_info(index, logging.getLogger())
     block_polygons = BufferedLineDifference().extract(geometry, linestrings.unary_union)
@@ -36,8 +36,8 @@ def extract(index: str, geometry: Union[Polygon, MultiPolygon], linestrings: gpd
         [(index + "_" + str(i), polygon) for (i, polygon) in enumerate(block_polygons)], 
         columns=["block_id", "geometry"])
     blocks.set_index("block_id")
-    blocks.to_csv(target)
-    info("Serialized blocks from %s to %s", index, target)
+    blocks.to_csv(output_path)
+    info("Serialized blocks from %s to %s", index, output_path)
     log_memory_info(index, logging.getLogger())
 
 def main(gadm_path: Path, linestrings_path: Path, output_dir: Path, gadm_level: int, overwrite: bool):
@@ -47,8 +47,8 @@ def main(gadm_path: Path, linestrings_path: Path, output_dir: Path, gadm_level: 
     log_dst.mkdir(exist_ok = True, parents = True)
     logger.addHandler(logging.FileHandler(log_dst/f"{gadm_path.stem}_{timestamp}.log"))
 
-    index = gadm_path.stem
-    filename = output_dir/f"blocks_{index}.csv"
+    index = str(gadm_path).split("/")[-1].replace(".csv", "")
+    filename = output_dir/("blocks_{}.csv".format(index))
 
     if (not filename.exists()) or (filename.exists() and overwrite):
         info("Reading geospatial data from files.")
@@ -77,7 +77,8 @@ def main(gadm_path: Path, linestrings_path: Path, output_dir: Path, gadm_level: 
         log_memory_info("main", logger)
         for (index, geometry, ls_idx) in gadm_aggregation.itertuples():
             try:
-                extract(index, geometry, linestrings.iloc[ls_idx], filename, output_dir) 
+                output_path = output_dir / ('blocks_' + index + '.csv')
+                extract(index, geometry, linestrings.iloc[ls_idx], filename, output_path) 
             except Exception as e:
                 error("%s while processing %s: %s", type(e).__name__, index, e)
                 with open(output_dir/f"error_{index}", 'a') as error_file:
