@@ -23,7 +23,7 @@ def build_data_dir(root: str, permission_override: bool = False, additional: Opt
     }
     if permission_override:
         data_paths["root"] = root       
-        for path in data_paths.values():
+        for dir_path in data_paths.values():
             dir_path.mkdir(parents=True, exist_ok=True)
     else:
         info('Downloading will create the following repositories if they do not already exist:')
