@@ -11,7 +11,7 @@ from sys import exit
 GADM_URL      = URL("https://biogeo.ucdavis.edu/data/gadm3.6/shp")
 GEOFABRIK_URL = URL("http://download.geofabrik.de/")
 
-def build_data_dir(root: str, additional: Optional[Sequence[str]] = None, permission_override: str = False) -> Dict[str, Path]:
+def build_data_dir(root: str, permission_override: bool = False, additional: Optional[Sequence[str]] = None) -> Dict[str, Path]:
     '''
     Build canonical data directory structure
     '''
@@ -23,18 +23,18 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None, permis
     }
     if permission_override:
         data_paths["root"] = root       
-        for path in data_paths.values():
+        for dir_path in data_paths.values():
             dir_path.mkdir(parents=True, exist_ok=True)
     else:
         info('Downloading will create the following repositories if they do not already exist:')
         for dir_path in data_paths.values():
             info(f'{dir_path.resolve()}')
-        user_response = input('Do you wish to proceed with download to the specified folder? Please enter "y" or "n".')
+        user_response = input('Do you wish to proceed with download to the specified folder? Please enter "y" or "n"\n')
         while user_response.lower() not in ['y', 'n']:
-            user_repsonse = input('Please enter "y" or "n"')
+            user_response = input('Please enter "y" or "n"\n')
         if user_response == 'y':
             data_paths["root"] = root
-            for path in data_paths.values():
+            for dir_path in data_paths.values():
                 dir_path.mkdir(parents=True, exist_ok=True)
         else:
             info('Download will not proceed and folders will not be created.')
@@ -76,7 +76,7 @@ def get_gadm_data(data_root: str,
         - overwrite: (bool) if True will overwrite contents, if False will skip if country code has been processed already
     '''
 
-    data_paths = build_data_dir(data_root, additional=["zipfiles"])
+    data_paths = build_data_dir(data_root, permission_override, additional=["zipfiles"])
 
     for (country_name, country_code) in country_codes.items():
         outpath = data_paths['gadm']/country_code
@@ -104,7 +104,7 @@ def get_geofabrik_data(data_root: str,
     geofabrik pbf file which contains all OSM data for that country. Checks whether
     the data has already been downloaded
     '''
-    data_paths = build_data_dir(data_root)
+    data_paths = build_data_dir(data_root, permission_override)
     for (name, region) in country_regions.items():  
         outpath = data_paths["geofabrik"]/f"{name}-latest.osm.pbf"
         if overwrite or not outpath.exists():
@@ -131,11 +131,11 @@ def main(data_source: str,
             [["country", "gadm_name"]]\
             .set_index("country")\
             .to_dict()["gadm_name"]
-        get_gadm_data(data_root, gadm_mapping, overwrite)
+        get_gadm_data(data_root, gadm_mapping, overwrite, permission_override)
     if data_source.lower() == "geofabrik":
         geofabrik_mapping = mappings.dropna()\
             [["geofabrik_name", "geofabrik_region"]]\
             .set_index("geofabrik_name")\
             .to_dict()["geofabrik_region"]
-        get_geofabrik_data(data_root, geofabrik_mapping, overwrite, verbose)
+        get_geofabrik_data(data_root, geofabrik_mapping, overwrite, verbose, permission_override)
     # argument parser in cli.py validates that data source will be valid
