@@ -36,7 +36,7 @@ def build_data_dir(root: str, additional: Optional[Sequence[str]] = None, permis
             data_paths["root"] = root
             for dir_path in data_paths.values():
                 dir_path.mkdir(parents=True, exist_ok=True)
-        else
+        else:
             info('Download will not proceed and folders will not be created.')
             exit()
     return data_paths
@@ -76,7 +76,7 @@ def get_gadm_data(data_root: str,
         - overwrite: (bool) if True will overwrite contents, if False will skip if country code has been processed already
     '''
 
-    data_paths = build_data_dir(data_root, additional=["zipfiles"])
+    data_paths = build_data_dir(data_root, additional=["zipfiles"], permission_override)
 
     for (country_name, country_code) in country_codes.items():
         outpath = data_paths['gadm']/country_code
@@ -131,11 +131,11 @@ def main(data_source: str,
             [["country", "gadm_name"]]\
             .set_index("country")\
             .to_dict()["gadm_name"]
-        get_gadm_data(data_root, gadm_mapping, overwrite)
+        get_gadm_data(data_root, gadm_mapping, overwrite, permission_override)
     if data_source.lower() == "geofabrik":
         geofabrik_mapping = mappings.dropna()\
             [["geofabrik_name", "geofabrik_region"]]\
             .set_index("geofabrik_name")\
             .to_dict()["geofabrik_region"]
-        get_geofabrik_data(data_root, geofabrik_mapping, overwrite, verbose)
+        get_geofabrik_data(data_root, geofabrik_mapping, overwrite, verbose, permission_override)
     # argument parser in cli.py validates that data source will be valid
