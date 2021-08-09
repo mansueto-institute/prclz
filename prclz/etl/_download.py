@@ -11,7 +11,7 @@ from sys import exit
 GADM_URL      = URL("https://biogeo.ucdavis.edu/data/gadm3.6/shp")
 GEOFABRIK_URL = URL("http://download.geofabrik.de/")
 
-def build_data_dir(root: str, additional: Optional[Sequence[str]] = None, permission_override: str = False) -> Dict[str, Path]:
+def build_data_dir(root: str, permission_override: bool = False, additional: Optional[Sequence[str]] = None) -> Dict[str, Path]:
     '''
     Build canonical data directory structure
     '''
@@ -76,7 +76,7 @@ def get_gadm_data(data_root: str,
         - overwrite: (bool) if True will overwrite contents, if False will skip if country code has been processed already
     '''
 
-    data_paths = build_data_dir(data_root, additional=["zipfiles"], permission_override)
+    data_paths = build_data_dir(data_root, permission_override, additional=["zipfiles"])
 
     for (country_name, country_code) in country_codes.items():
         outpath = data_paths['gadm']/country_code
@@ -104,7 +104,7 @@ def get_geofabrik_data(data_root: str,
     geofabrik pbf file which contains all OSM data for that country. Checks whether
     the data has already been downloaded
     '''
-    data_paths = build_data_dir(data_root)
+    data_paths = build_data_dir(data_root, permission_override)
     for (name, region) in country_regions.items():  
         outpath = data_paths["geofabrik"]/f"{name}-latest.osm.pbf"
         if overwrite or not outpath.exists():
